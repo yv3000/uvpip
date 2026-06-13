@@ -1,0 +1,24 @@
+# Go binaries
+uvpip
+uvpip.exe
+uvpip-*
+*.exe
+
+# Build output
+dist/
+build/
+
+# OS artifacts
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Test cache
+*.test
+coverage.out

@@ -12,23 +12,18 @@ func translateToUV(args []string) []string {
 
 	cmd := strings.ToLower(args[0])
 
-	// Commands that map directly under "uv pip"
+	// Commands that map directly under "uv pip" — verified against
+	// `uv pip --help`: compile, sync, install, uninstall, freeze, list, show, tree, check.
+	// (uninstall is handled separately below because it needs arg filtering.)
 	directPassthrough := map[string]bool{
-		"install":    true,
-		"list":       true,
-		"show":       true,
-		"freeze":     true,
-		"check":      true,
-		"download":   true,
-		"wheel":      true,
-		"hash":       true,
-		"completion": true,
-		"debug":      true,
-		"inspect":    true,
-		"config":     true,
-		"cache":      true,
-		"index":      true,
-		"search":     true,
+		"install": true,
+		"list":    true,
+		"show":    true,
+		"freeze":  true,
+		"check":   true,
+		"compile": true,
+		"sync":    true,
+		"tree":    true,
 	}
 
 	if directPassthrough[cmd] {
@@ -36,21 +31,22 @@ func translateToUV(args []string) []string {
 		return append([]string{"pip"}, args...)
 	}
 
+	// "cache" is a top-level uv command, not a "uv pip" subcommand.
+	if cmd == "cache" {
+		return append([]string{"cache"}, args[1:]...)
+	}
+
 	// Commands that need special handling
 	switch cmd {
 	case "uninstall", "remove":
-		// pip uninstall X -> uv pip uninstall doesn't prompt for confirmation by default — pass -y if not already there
-		newArgs := []string{"pip", "uninstall"}
-		hasY := false
+		filteredArgs := []string{}
 		for _, a := range args[1:] {
 			if a == "-y" || a == "--yes" {
-				hasY = true
+				continue
 			}
+			filteredArgs = append(filteredArgs, a)
 		}
-		if !hasY {
-			newArgs = append(newArgs, "-y")
-		}
-		return append(newArgs, args[1:]...)
+		return append([]string{"pip", "uninstall"}, filteredArgs...)
 
 	case "upgrade":
 		// pip upgrade X -> uv pip install --upgrade X

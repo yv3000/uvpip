@@ -120,14 +120,24 @@ func autoInstallUV() error {
 func buildEnv(uvPath string) []string {
 	env := os.Environ()
 
+	// Only set UV_SYSTEM_PYTHON if no virtualenv is currently active.
+	// Detect an active venv via the VIRTUAL_ENV environment variable, which
+	// is set by every standard venv/virtualenv activation script.
+	_, venvActive := os.LookupEnv("VIRTUAL_ENV")
+
 	overrides := map[string]string{
-		// Tells tools like pip itself and scaffold tools which package manager is active
-		"UV_SYSTEM_PYTHON": "1",
-		// Prevents pip from demanding a venv when user hasn't activated one
-		"PIP_REQUIRE_VIRTUALENV": "0",
 		// Points any child "pip" call at our uvpip binary so nested installs also go through uv
 		"PIP_PYTHON": uvPath,
 	}
+
+	if !venvActive {
+		// No venv active: let uv target the system interpreter so `pip install X`
+		// works even when the user hasn't created a venv (matches plain pip's behavior).
+		overrides["UV_SYSTEM_PYTHON"] = "1"
+	}
+	// If a venv IS active, do not set UV_SYSTEM_PYTHON at all — uv will
+	// correctly detect and use the active venv on its own, exactly like
+	// plain `uv pip install` does today.
 
 	// Build final env — overrides win over existing values
 	result := []string{}

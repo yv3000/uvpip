@@ -1,4 +1,4 @@
-# install.ps1 - uvpip Windows installer
+﻿# install.ps1 - uvpip Windows installer
 # Run with: irm https://raw.githubusercontent.com/yv3000/uvpip/main/installer/install.ps1 | iex
 # No admin required. Uses User-level PATH only (with System PATH fallback via UAC prompt).
 

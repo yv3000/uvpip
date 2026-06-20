@@ -40,16 +40,19 @@ try {
 try {
     if (Test-Path -Path $PROFILE) {
         $profileContent = Get-Content -Path $PROFILE -ErrorAction SilentlyContinue
-        if ($profileContent -match "# uvpip shell functions - survive venv activation") {
+        if ($profileContent -match "# --- uvpip start ---") {
             $newProfile = @()
-            $skipCount = 0
+            $insideBlock = $false
             foreach ($line in $profileContent) {
-                if ($skipCount -gt 0) {
-                    $skipCount--
+                if ($line -match "# --- uvpip start ---") {
+                    $insideBlock = $true
                     continue
                 }
-                if ($line -match "# uvpip shell functions - survive venv activation") {
-                    $skipCount = 6  # skips this line + the 6 lines of the two functions
+                if ($line -match "# --- uvpip end ---") {
+                    $insideBlock = $false
+                    continue
+                }
+                if ($insideBlock) {
                     continue
                 }
                 $newProfile += $line

@@ -153,15 +153,16 @@ try {
     }
     
     $profileContent = Get-Content -Path $PROFILE -ErrorAction SilentlyContinue
-    if ($profileContent -notmatch "# uvpip shell functions - survive venv activation") {
+    if ($profileContent -notmatch "# --- uvpip start ---") {
         $funcBlock = @"
-`n# uvpip shell functions - survive venv activation
+`n# --- uvpip start ---
 function pip {
     & `"$env:USERPROFILE\.uvpip\bin\uvpip.exe`" @args
 }
 function pip3 {
     & `"$env:USERPROFILE\.uvpip\bin\uvpip.exe`" @args
 }
+# --- uvpip end ---
 "@
         Add-Content -Path $PROFILE -Value $funcBlock
         Write-OK "Added shell functions to `$PROFILE"

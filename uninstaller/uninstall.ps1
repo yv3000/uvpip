@@ -1,5 +1,5 @@
-﻿# uninstall.ps1 - uvpip Windows uninstaller
-# Run with: irm https://raw.githubusercontent.com/yv3000/uvpip/main/uninstaller/uninstall.ps1 | iex
+# uninstall.ps1 - uvpip Windows uninstaller
+# Run with: iex (irm https://raw.githubusercontent.com/yv3000/uvpip/main/uninstaller/uninstall.ps1)
 
 $ErrorActionPreference = "Stop"
 
@@ -19,7 +19,7 @@ Write-Host ""
 # --- Step 1: Check if installed ----------------------------------------------
 if (-not (Test-Path $installDir)) {
     Write-WRN "uvpip does not appear to be installed (no folder at $installDir)"
-    exit 0
+    return
 }
 
 # --- Step 2: Remove from User PATH -------------------------------------------
@@ -88,7 +88,7 @@ try {
 } catch {
     Write-ERR "Failed to delete $installDir : $($_.Exception.Message)"
     Write-NFO "Close any terminal windows using uvpip, then run this script again."
-    exit 1
+    return
 }
 
 # --- Step 5: Refresh current session -----------------------------------------

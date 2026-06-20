@@ -1,5 +1,5 @@
-﻿# install.ps1 - uvpip Windows installer
-# Run with: irm https://raw.githubusercontent.com/yv3000/uvpip/main/installer/install.ps1 | iex
+# install.ps1 - uvpip Windows installer
+# Run with: iex (irm https://raw.githubusercontent.com/yv3000/uvpip/main/installer/install.ps1)
 # No admin required. Uses User-level PATH only (with System PATH fallback via UAC prompt).
 
 $ErrorActionPreference = "Stop"
@@ -31,9 +31,9 @@ Write-OK "Architecture: $arch -> $binaryName"
 if (Test-Path $exePath) {
     Write-WRN "uvpip is already installed at $exePath"
     Write-NFO "To reinstall, run the uninstaller first:"
-    Write-NFO "irm https://raw.githubusercontent.com/yv3000/uvpip/main/uninstaller/uninstall.ps1 | iex"
+    Write-NFO "iex (irm https://raw.githubusercontent.com/yv3000/uvpip/main/uninstaller/uninstall.ps1)"
     Write-Host ""
-    exit 0
+    return
 }
 
 # --- Step 3: Check / install uv ----------------------------------------------
@@ -49,7 +49,7 @@ try {
 if (-not $uvFound) {
     Write-NFO "uv not found. Installing uv automatically..."
     try {
-        Invoke-RestMethod https://astral.sh/uv/install.ps1 | Invoke-Expression
+        Invoke-Expression (Invoke-RestMethod https://astral.sh/uv/install.ps1)
         # Refresh PATH in current session so uv is available
         $uvBinDir = Join-Path $env:USERPROFILE ".local\bin"
         if (Test-Path $uvBinDir) {
@@ -65,7 +65,7 @@ if (-not $uvFound) {
     } catch {
         Write-ERR "Failed to install uv: $($_.Exception.Message)"
         Write-NFO "Install uv manually from: https://docs.astral.sh/uv/getting-started/installation/"
-        exit 1
+        return
     }
 }
 
@@ -100,7 +100,7 @@ try {
     Write-OK "Created $installDir"
 } catch {
     Write-ERR "Failed to create install directory: $($_.Exception.Message)"
-    exit 1
+    return
 }
 
 # --- Step 6: Download uvpip binary -------------------------------------------
@@ -114,7 +114,7 @@ try {
     Write-NFO "URL tried: $downloadUrl"
     Write-NFO "Make sure a GitHub release exists with that binary name."
     if (Test-Path $installDir) { Remove-Item -Path $installDir -Recurse -Force -ErrorAction SilentlyContinue }
-    exit 1
+    return
 }
 
 # --- Step 7: Write pip.cmd and pip3.cmd shims --------------------------------
@@ -125,7 +125,7 @@ try {
     Write-OK "Created pip.cmd and pip3.cmd shims"
 } catch {
     Write-ERR "Failed to create shim files: $($_.Exception.Message)"
-    exit 1
+    return
 }
 
 # --- Step 8: Prepend to User PATH --------------------------------------------

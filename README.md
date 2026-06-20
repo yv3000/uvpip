@@ -30,7 +30,7 @@
 Open **PowerShell** and run:
 
 ```powershell
-irm https://raw.githubusercontent.com/yv3000/uvpip/main/installer/install.ps1 | iex
+iex (irm https://raw.githubusercontent.com/yv3000/uvpip/main/installer/install.ps1)
 ```
 
 ### macOS / Linux
@@ -63,7 +63,7 @@ uvpip doctor            # verify everything is working
 ### Windows
 
 ```powershell
-irm https://raw.githubusercontent.com/yv3000/uvpip/main/uninstaller/uninstall.ps1 | iex
+iex (irm https://raw.githubusercontent.com/yv3000/uvpip/main/uninstaller/uninstall.ps1)
 ```
 
 ### macOS / Linux

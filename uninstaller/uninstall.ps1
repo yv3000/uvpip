@@ -1,4 +1,4 @@
-# uninstall.ps1 - uvpip Windows uninstaller
+﻿# uninstall.ps1 - uvpip Windows uninstaller
 # Run with: iex (irm https://raw.githubusercontent.com/yv3000/uvpip/main/uninstaller/uninstall.ps1)
 
 $ErrorActionPreference = "Stop"

@@ -122,14 +122,31 @@ PATH_EXPORT="export PATH=\"$BIN_DIR:\$PATH\""
 add_to_shell_config() {
     local config_file="$1"
     if [ -f "$config_file" ] || [ "$2" = "force" ]; then
-        if ! grep -q "uvpip" "$config_file" 2>/dev/null; then
+        if ! grep -q "uvpip start" "$config_file" 2>/dev/null; then
+            # Clean up old v1 entries before adding the new block
+            if sed --version 2>/dev/null | grep -q GNU; then
+                sed -i '/# uvpip/d' "$config_file"
+                sed -i '/\.uvpip/d' "$config_file"
+            else
+                sed -i '' '/# uvpip/d' "$config_file"
+                sed -i '' '/\.uvpip/d' "$config_file"
+            fi
+            
             echo "" >> "$config_file"
-            echo "# uvpip — transparent pip -> uv wrapper" >> "$config_file"
+            echo "# --- uvpip start ---" >> "$config_file"
             echo "$PATH_EXPORT" >> "$config_file"
-            ok "Added PATH entry to $config_file"
+            echo "pip() {" >> "$config_file"
+            echo "    \"\$HOME/.uvpip/bin/uvpip\" \"\$@\"" >> "$config_file"
+            echo "}" >> "$config_file"
+            echo "pip3() {" >> "$config_file"
+            echo "    \"\$HOME/.uvpip/bin/uvpip\" \"\$@\"" >> "$config_file"
+            echo "}" >> "$config_file"
+            echo "export -f pip pip3" >> "$config_file"
+            echo "# --- uvpip end ---" >> "$config_file"
+            ok "Added PATH entry and shell functions to $config_file"
             return 0
         else
-            wrn "PATH entry already in $config_file"
+            wrn "PATH entry/functions already in $config_file"
             return 0
         fi
     fi
@@ -152,11 +169,26 @@ case "$SHELL_NAME" in
     fish)
         FISH_CONFIG="$HOME/.config/fish/config.fish"
         mkdir -p "$(dirname "$FISH_CONFIG")"
-        if ! grep -q "uvpip" "$FISH_CONFIG" 2>/dev/null; then
+        if ! grep -q "uvpip start" "$FISH_CONFIG" 2>/dev/null; then
+            if sed --version 2>/dev/null | grep -q GNU; then
+                sed -i '/# uvpip/d' "$FISH_CONFIG"
+                sed -i '/\.uvpip/d' "$FISH_CONFIG"
+            else
+                sed -i '' '/# uvpip/d' "$FISH_CONFIG"
+                sed -i '' '/\.uvpip/d' "$FISH_CONFIG"
+            fi
+
             echo "" >> "$FISH_CONFIG"
-            echo "# uvpip" >> "$FISH_CONFIG"
+            echo "# --- uvpip start ---" >> "$FISH_CONFIG"
             echo "fish_add_path $BIN_DIR" >> "$FISH_CONFIG"
-            ok "Added PATH entry to $FISH_CONFIG"
+            echo "function pip" >> "$FISH_CONFIG"
+            echo "    \"\$HOME/.uvpip/bin/uvpip\" \$argv" >> "$FISH_CONFIG"
+            echo "end" >> "$FISH_CONFIG"
+            echo "function pip3" >> "$FISH_CONFIG"
+            echo "    \"\$HOME/.uvpip/bin/uvpip\" \$argv" >> "$FISH_CONFIG"
+            echo "end" >> "$FISH_CONFIG"
+            echo "# --- uvpip end ---" >> "$FISH_CONFIG"
+            ok "Added PATH entry and shell functions to $FISH_CONFIG"
             PATH_ADDED=true
         fi
         ;;

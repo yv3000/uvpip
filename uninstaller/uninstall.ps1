@@ -36,6 +36,32 @@ try {
     Write-ERR "Failed to update User PATH: $($_.Exception.Message)"
 }
 
+# --- Step 2.5: Remove from PowerShell profile --------------------------------
+try {
+    if (Test-Path -Path $PROFILE) {
+        $profileContent = Get-Content -Path $PROFILE -ErrorAction SilentlyContinue
+        if ($profileContent -match "# uvpip shell functions - survive venv activation") {
+            $newProfile = @()
+            $skipCount = 0
+            foreach ($line in $profileContent) {
+                if ($skipCount -gt 0) {
+                    $skipCount--
+                    continue
+                }
+                if ($line -match "# uvpip shell functions - survive venv activation") {
+                    $skipCount = 6  # skips this line + the 6 lines of the two functions
+                    continue
+                }
+                $newProfile += $line
+            }
+            Set-Content -Path $PROFILE -Value $newProfile
+            Write-OK "Removed shell functions from `$PROFILE"
+        }
+    }
+} catch {
+    Write-WRN "Failed to clean `$PROFILE: $($_.Exception.Message)"
+}
+
 # --- Step 3: Remove from System PATH (UAC) -----------------------------------
 try {
     $machinePath = [Environment]::GetEnvironmentVariable("PATH", "Machine")

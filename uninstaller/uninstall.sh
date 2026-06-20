@@ -27,17 +27,19 @@ fi
 remove_from_config() {
     local config_file="$1"
     if [ -f "$config_file" ] && grep -q "uvpip" "$config_file" 2>/dev/null; then
-        # Remove uvpip comment and PATH lines
+        # Remove uvpip comment, PATH lines, and shell function blocks
         if sed --version 2>/dev/null | grep -q GNU; then
             # GNU sed (Linux)
+            sed -i '/# --- uvpip start ---/,/# --- uvpip end ---/d' "$config_file"
             sed -i '/# uvpip/d' "$config_file"
             sed -i '/\.uvpip/d' "$config_file"
         else
             # BSD sed (macOS)
+            sed -i '' '/# --- uvpip start ---/,/# --- uvpip end ---/d' "$config_file"
             sed -i '' '/# uvpip/d' "$config_file"
             sed -i '' '/\.uvpip/d' "$config_file"
         fi
-        ok "Removed uvpip PATH entry from $config_file"
+        ok "Removed uvpip PATH entry and functions from $config_file"
     fi
 }
 
@@ -50,11 +52,15 @@ remove_from_config "$HOME/.profile"
 FISH_CONFIG="$HOME/.config/fish/config.fish"
 if [ -f "$FISH_CONFIG" ] && grep -q "uvpip" "$FISH_CONFIG" 2>/dev/null; then
     if sed --version 2>/dev/null | grep -q GNU; then
-        sed -i '/uvpip/d' "$FISH_CONFIG"
+        sed -i '/# --- uvpip start ---/,/# --- uvpip end ---/d' "$FISH_CONFIG"
+        sed -i '/# uvpip/d' "$FISH_CONFIG"
+        sed -i '/\.uvpip/d' "$FISH_CONFIG"
     else
-        sed -i '' '/uvpip/d' "$FISH_CONFIG"
+        sed -i '' '/# --- uvpip start ---/,/# --- uvpip end ---/d' "$FISH_CONFIG"
+        sed -i '' '/# uvpip/d' "$FISH_CONFIG"
+        sed -i '' '/\.uvpip/d' "$FISH_CONFIG"
     fi
-    ok "Removed uvpip PATH entry from $FISH_CONFIG"
+    ok "Removed uvpip PATH entry and functions from $FISH_CONFIG"
 fi
 
 # ─── Step 3: Delete install directory ────────────────────────────────────────

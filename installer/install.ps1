@@ -142,6 +142,37 @@ try {
     Write-ERR "Failed to update User PATH: $($_.Exception.Message)"
 }
 
+# --- Step 8.5: Add shell functions to PowerShell profile ---------------------
+try {
+    if (-not (Test-Path -Path $PROFILE)) {
+        $profileDir = Split-Path -Path $PROFILE -Parent
+        if (-not (Test-Path -Path $profileDir)) {
+            New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
+        }
+        New-Item -ItemType File -Force -Path $PROFILE | Out-Null
+    }
+    
+    $profileContent = Get-Content -Path $PROFILE -ErrorAction SilentlyContinue
+    if ($profileContent -notmatch "# uvpip shell functions - survive venv activation") {
+        $funcBlock = @"
+`n# uvpip shell functions - survive venv activation
+function pip {
+    & `"$env:USERPROFILE\.uvpip\bin\uvpip.exe`" @args
+}
+function pip3 {
+    & `"$env:USERPROFILE\.uvpip\bin\uvpip.exe`" @args
+}
+"@
+        Add-Content -Path $PROFILE -Value $funcBlock
+        Write-OK "Added shell functions to `$PROFILE"
+    } else {
+        Write-OK "Shell functions already in `$PROFILE"
+    }
+} catch {
+    Write-WRN "Could not update `$PROFILE automatically."
+    Write-NFO "Consider adding the pip functions manually for full venv compatibility."
+}
+
 # --- Step 9: Prepend to System PATH (requires admin - opens UAC prompt) ------
 try {
     $machinePath = [Environment]::GetEnvironmentVariable("PATH", "Machine")

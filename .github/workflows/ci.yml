@@ -1,0 +1,97 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Verify (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 25
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-24.04, windows-2022, macos-14]
+    env:
+      GOTOOLCHAIN: local
+      GOFLAGS: -mod=readonly
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@d35c59abb061a4a6fb18e82ac0862c26744d6ab5 # v5.5.0
+        with:
+          go-version: '1.26.8'
+          cache: false
+      - name: Install pinned Go tools
+        shell: bash
+        env:
+          GOPATH: ${{ runner.temp }}/uvpip-tools/go
+          GOBIN: ${{ runner.temp }}/uvpip-tools/bin
+          GOCACHE: ${{ runner.temp }}/uvpip-tools/build-cache
+          GOMODCACHE: ${{ runner.temp }}/uvpip-tools/module-cache
+          GOTMPDIR: ${{ runner.temp }}/uvpip-tools/tmp
+        run: |
+          mkdir -p "$GOBIN" "$GOCACHE" "$GOMODCACHE" "$GOTMPDIR"
+          go install honnef.co/go/tools/cmd/staticcheck@v0.8.1
+          go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
+          go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
+          go install github.com/zricethezav/gitleaks/v8@v8.30.1
+          printf '%s\n' "$GOBIN" >> "$GITHUB_PATH"
+      - name: Install checksum-pinned ShellCheck 0.11.0
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $arch = [Runtime.InteropServices.RuntimeInformation]::OSArchitecture.ToString()
+          if ($IsWindows) {
+            $asset = 'shellcheck-v0.11.0.zip'
+            $sha256 = '8a4e35ab0b331c85d73567b12f2a444df187f483e5079ceffa6bda1faa2e740e'
+          } elseif ($IsMacOS -and $arch -eq 'Arm64') {
+            $asset = 'shellcheck-v0.11.0.darwin.aarch64.tar.gz'
+            $sha256 = '339b930feb1ea764467013cc1f72d09cd6b869ebf1013296ba9055ab2ffbd26f'
+          } elseif ($IsMacOS -and $arch -eq 'X64') {
+            $asset = 'shellcheck-v0.11.0.darwin.x86_64.tar.gz'
+            $sha256 = 'c2c15e08df0e8fbc374c335b230a7ee958c313fa5714817a59aa59f1aa594f51'
+          } elseif ($IsLinux -and $arch -eq 'X64') {
+            $asset = 'shellcheck-v0.11.0.linux.x86_64.tar.gz'
+            $sha256 = 'b7af85e41cc99489dcc21d66c6d5f3685138f06d34651e6d34b42ec6d54fe6f6'
+          } else { throw "Unsupported ShellCheck host: $arch" }
+          $archive = Join-Path $env:RUNNER_TEMP $asset
+          Invoke-WebRequest "https://github.com/koalaman/shellcheck/releases/download/v0.11.0/$asset" -OutFile $archive
+          if ((Get-FileHash $archive -Algorithm SHA256).Hash -ine $sha256) { throw 'ShellCheck checksum mismatch' }
+          $destination = Join-Path $env:RUNNER_TEMP 'shellcheck'
+          New-Item -ItemType Directory -Path $destination | Out-Null
+          if ($IsWindows) {
+            Expand-Archive -LiteralPath $archive -DestinationPath $destination
+          } else {
+            tar -xzf $archive -C $destination
+            if ($LASTEXITCODE -ne 0) { throw 'ShellCheck extraction failed' }
+          }
+          $binary = @(Get-ChildItem $destination -Recurse -File | Where-Object { $_.Name -in 'shellcheck', 'shellcheck.exe' })
+          if ($binary.Count -ne 1) { throw 'Expected one ShellCheck binary' }
+          $binary[0].DirectoryName >> $env:GITHUB_PATH
+      - name: Verify Linux and macOS
+        if: runner.os != 'Windows'
+        shell: bash
+        run: |
+          mkdir -p "$RUNNER_TEMP/uvpip-cache" "$RUNNER_TEMP/uvpip-tests"
+          sh scripts/verify.sh "$RUNNER_TEMP/uvpip-tests" "$RUNNER_TEMP/uvpip-cache"
+      - name: Verify Windows (PowerShell 5.1)
+        if: runner.os == 'Windows'
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $cache = Join-Path $env:RUNNER_TEMP 'uvpip-cache'
+          $tests = Join-Path $env:RUNNER_TEMP 'uvpip-tests'
+          New-Item -ItemType Directory -Path $cache, $tests | Out-Null
+          & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/verify.ps1 -TestRoot $tests -CacheRoot $cache
+          if ($LASTEXITCODE -ne 0) { throw 'Windows verification failed' }

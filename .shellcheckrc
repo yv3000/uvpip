@@ -1,0 +1,2 @@
+# Every checked .sh file is POSIX shell. No global warning suppressions.
+shell=sh

@@ -22,3 +22,33 @@ desktop.ini
 # Test cache
 *.test
 coverage.out
+
+# Local Python environments and generated dependencies
+/v1/
+.venv/
+venv/
+env/
+ENV/
+**/pyvenv.cfg
+**/site-packages/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.egg-info/
+/vendor/
+
+# Verification output and local configuration
+coverage*.out
+coverage*.html
+*.prof
+*.test.exe
+/test-results/
+/.cache/
+/.tmp/
+.env
+.env.*
+!.env.example
+*.pem
+*.key

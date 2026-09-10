@@ -1,227 +1,123 @@
-# install.ps1 - uvpip Windows installer
-# Run with: iex (irm https://raw.githubusercontent.com/yv3000/uvpip/main/installer/install.ps1)
-# No admin required. Uses User-level PATH only (with System PATH fallback via UAC prompt).
+# Per-user installer. Isolation: -NoProfile -NoPath -BinaryPath <local exe>.
+[CmdletBinding()]
+param(
+    [string]$BinaryPath = $env:UVPIP_BINARY,
+    [string]$SHA256 = $env:UVPIP_SHA256,
+    [switch]$NoProfile,
+    [switch]$NoPath
+)
+$ErrorActionPreference = 'Stop'
+if (-not $env:USERPROFILE) { throw 'USERPROFILE must be set' }
+$installDir = Join-Path $env:USERPROFILE '.uvpip'
+$binDir = Join-Path $installDir 'bin'
+$exePath = Join-Path $binDir 'uvpip.exe'
 
-$ErrorActionPreference = "Stop"
-
-$installDir = Join-Path $env:USERPROFILE ".uvpip"
-$binDir     = Join-Path $installDir "bin"
-$exePath    = Join-Path $binDir "uvpip.exe"
-$releaseBase = "https://github.com/yv3000/uvpip/releases/latest/download"
-
-function Write-OK  { param([string]$msg) Write-Host "  [OK] $msg" -ForegroundColor Green }
-function Write-WRN { param([string]$msg) Write-Host "  [!!] $msg" -ForegroundColor Yellow }
-function Write-ERR { param([string]$msg) Write-Host "  [ERR] $msg" -ForegroundColor Red }
-function Write-NFO { param([string]$msg) Write-Host "  [->] $msg" -ForegroundColor Cyan }
-
-Write-Host ""
-Write-Host "  uvpip installer for Windows" -ForegroundColor White
-Write-Host "  ----------------------------------------" -ForegroundColor DarkGray
-Write-Host ""
-
-# --- Step 1: Detect architecture ---------------------------------------------
-$arch = $env:PROCESSOR_ARCHITECTURE
-$binaryName = "uvpip-windows-amd64.exe"
-if ($arch -eq "ARM64") {
-    $binaryName = "uvpip-windows-arm64.exe"
-}
-Write-OK "Architecture: $arch -> $binaryName"
-
-# --- Step 2: Check if already installed --------------------------------------
-if (Test-Path $exePath) {
-    Write-WRN "uvpip is already installed at $exePath"
-    Write-NFO "To reinstall, run the uninstaller first:"
-    Write-NFO "iex (irm https://raw.githubusercontent.com/yv3000/uvpip/main/uninstaller/uninstall.ps1)"
-    Write-Host ""
-    return
+function Test-UvpipPath([string]$Entry) {
+    [Environment]::ExpandEnvironmentVariables($Entry.Trim().Trim('"')).TrimEnd('\', '/') -ieq $binDir.TrimEnd('\', '/')
 }
 
-# --- Step 3: Check / install uv ----------------------------------------------
-$uvFound = $false
-try {
-    $uvVer = & uv --version 2>$null
-    if ($LASTEXITCODE -eq 0 -and $uvVer) {
-        Write-OK "uv already installed: $uvVer"
-        $uvFound = $true
+function Add-UvpipProfile {
+    $text = ''
+    $encoding = New-Object System.Text.UTF8Encoding($false)
+    $preamble = [byte[]]@()
+    if (Test-Path -LiteralPath $PROFILE) {
+        # Latin-1 round-trips BOM-less bytes (including UTF-8/ANSI). BOMs select Unicode encoding.
+        $reader = New-Object System.IO.StreamReader($PROFILE, [Text.Encoding]::GetEncoding(28591), $true)
+        try { $text = $reader.ReadToEnd(); $encoding = $reader.CurrentEncoding } finally { $reader.Dispose() }
+        $preamble = $encoding.GetPreamble()
     }
-} catch {}
-
-if (-not $uvFound) {
-    Write-NFO "uv not found. Installing uv automatically..."
-    try {
-        Invoke-Expression (Invoke-RestMethod https://astral.sh/uv/install.ps1)
-        # Refresh PATH in current session so uv is available
-        $uvBinDir = Join-Path $env:USERPROFILE ".local\bin"
-        if (Test-Path $uvBinDir) {
-            $env:PATH = "$uvBinDir;$env:PATH"
-        }
-        $uvVer = & uv --version 2>$null
-        if ($LASTEXITCODE -eq 0 -and $uvVer) {
-            Write-OK "uv installed: $uvVer"
-            $uvFound = $true
-        } else {
-            throw "uv did not respond after install"
-        }
-    } catch {
-        Write-ERR "Failed to install uv: $($_.Exception.Message)"
-        Write-NFO "Install uv manually from: https://docs.astral.sh/uv/getting-started/installation/"
-        return
+    $markers = [regex]::Matches($text, '(?m)^# --- uvpip (start|end) ---\r?$')
+    $inside = $false
+    foreach ($marker in $markers) {
+        $start = $marker.Groups[1].Value -eq 'start'
+        if ($start -eq $inside) { throw "Unbalanced uvpip markers in $PROFILE; repair manually" }
+        $inside = $start
     }
-}
-
-# --- Step 4: Check / install pip (Python) ------------------------------------
-$pipFound = $false
-try {
-    $pipVer = & pip --version 2>$null
-    if ($LASTEXITCODE -eq 0 -and $pipVer) {
-        Write-OK "pip already available: $pipVer"
-        $pipFound = $true
-    }
-} catch {}
-
-if (-not $pipFound) {
-    Write-NFO "pip not found. Checking for Python..."
-    try {
-        $pyVer = & python --version 2>$null
-        if ($LASTEXITCODE -eq 0 -and $pyVer) {
-            Write-OK "Python found: $pyVer"
-            Write-NFO "pip not installed but Python is present. uvpip will use uv directly."
-        } else {
-            Write-WRN "Python not found. uvpip will work via uv but standard pip fallback unavailable."
-        }
-    } catch {
-        Write-WRN "Could not detect Python. uvpip will use uv directly."
-    }
-}
-
-# --- Step 5: Create install directory ----------------------------------------
-try {
-    New-Item -ItemType Directory -Force -Path $binDir | Out-Null
-    Write-OK "Created $installDir"
-} catch {
-    Write-ERR "Failed to create install directory: $($_.Exception.Message)"
-    return
-}
-
-# --- Step 6: Download uvpip binary -------------------------------------------
-$downloadUrl = "$releaseBase/$binaryName"
-Write-NFO "Downloading $binaryName from GitHub releases..."
-try {
-    Invoke-WebRequest -Uri $downloadUrl -OutFile $exePath -UseBasicParsing
-    Write-OK "Downloaded uvpip.exe to $exePath"
-} catch {
-    Write-ERR "Download failed: $($_.Exception.Message)"
-    Write-NFO "URL tried: $downloadUrl"
-    Write-NFO "Make sure a GitHub release exists with that binary name."
-    if (Test-Path $installDir) { Remove-Item -Path $installDir -Recurse -Force -ErrorAction SilentlyContinue }
-    return
-}
-
-# --- Step 7: Write pip.cmd and pip3.cmd shims --------------------------------
-$shimContent = "@echo off`r`n`"$exePath`" %*"
-try {
-    Set-Content -Path (Join-Path $binDir "pip.cmd")  -Value $shimContent -Encoding ASCII
-    Set-Content -Path (Join-Path $binDir "pip3.cmd") -Value $shimContent -Encoding ASCII
-    Write-OK "Created pip.cmd and pip3.cmd shims"
-} catch {
-    Write-ERR "Failed to create shim files: $($_.Exception.Message)"
-    return
-}
-
-# --- Step 8: Prepend to User PATH --------------------------------------------
-try {
-    $currentPath = [Environment]::GetEnvironmentVariable("PATH", "User")
-    if ($null -eq $currentPath) { $currentPath = "" }
-    if ($currentPath -notlike "*$binDir*") {
-        [Environment]::SetEnvironmentVariable("PATH", "$binDir;$currentPath", "User")
-        Write-OK "Added $binDir to User PATH"
-    } else {
-        Write-WRN "$binDir already in User PATH"
-    }
-} catch {
-    Write-ERR "Failed to update User PATH: $($_.Exception.Message)"
-}
-
-# --- Step 8.5: Add shell functions to PowerShell profile ---------------------
-try {
-    if (-not (Test-Path -Path $PROFILE)) {
-        $profileDir = Split-Path -Path $PROFILE -Parent
-        if (-not (Test-Path -Path $profileDir)) {
-            New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
-        }
-        New-Item -ItemType File -Force -Path $PROFILE | Out-Null
-    }
-    
-    $profileContent = Get-Content -Path $PROFILE -ErrorAction SilentlyContinue
-    if ($profileContent -notmatch "# --- uvpip start ---") {
-        $funcBlock = @"
-`n# --- uvpip start ---
+    if ($inside) { throw "Unbalanced uvpip markers in $PROFILE; repair manually" }
+    if ($markers.Count) { return }
+    $block = @'
+# --- uvpip start ---
 function pip {
-    & `"$env:USERPROFILE\.uvpip\bin\uvpip.exe`" @args
+    & "$env:USERPROFILE\.uvpip\bin\uvpip.exe" @args
 }
 function pip3 {
-    & `"$env:USERPROFILE\.uvpip\bin\uvpip.exe`" @args
+    & "$env:USERPROFILE\.uvpip\bin\uvpip.exe" @args
 }
 # --- uvpip end ---
-"@
-        Add-Content -Path $PROFILE -Value $funcBlock
-        Write-OK "Added shell functions to `$PROFILE"
-    } else {
-        Write-OK "Shell functions already in `$PROFILE"
-    }
-} catch {
-    Write-WRN "Could not update `$PROFILE automatically."
-    Write-NFO "Consider adding the pip functions manually for full venv compatibility."
+'@
+    $newline = "`r`n"
+    if ($text.Contains("`n") -and -not $text.Contains("`r`n")) { $newline = "`n" }
+    if ($text.Length -and -not $text.EndsWith("`n")) { $text += $newline }
+    $text += ($block -replace '\r?\n', $newline) + $newline
+    [IO.Directory]::CreateDirectory((Split-Path -Parent $PROFILE)) | Out-Null
+    [IO.File]::WriteAllBytes($PROFILE, [byte[]]($preamble + $encoding.GetBytes($text)))
 }
 
-# --- Step 9: Prepend to System PATH (requires admin - opens UAC prompt) ------
+$stage = Join-Path ([IO.Path]::GetTempPath()) ('uvpip-install-' + [guid]::NewGuid().ToString('N'))
+[IO.Directory]::CreateDirectory($stage) | Out-Null
 try {
-    $machinePath = [Environment]::GetEnvironmentVariable("PATH", "Machine")
-    if ($null -eq $machinePath) { $machinePath = "" }
-    if ($machinePath -notlike "*$binDir*") {
-        $escapedBinDir = $binDir -replace "'", "''"
-        Start-Process powershell -Verb RunAs -Wait -ArgumentList `
-            "-ExecutionPolicy Bypass -Command `"[Environment]::SetEnvironmentVariable('PATH', '$escapedBinDir;' + [Environment]::GetEnvironmentVariable('PATH','Machine'), 'Machine')`""
-        Write-OK "Added $binDir to System PATH (admin)"
+    $candidate = Join-Path $stage 'uvpip.exe'
+    if (-not (Test-Path -LiteralPath $exePath)) {
+        if ($BinaryPath) {
+            Copy-Item -LiteralPath $BinaryPath -Destination $candidate
+        } else {
+            $arch = $env:PROCESSOR_ARCHITEW6432
+            if (-not $arch) { $arch = $env:PROCESSOR_ARCHITECTURE }
+            switch ($arch) {
+                'AMD64' { $archName = 'amd64' }
+                'ARM64' { $archName = 'arm64' }
+                default { throw "Unsupported architecture: $arch" }
+            }
+            Invoke-WebRequest -Uri "https://github.com/yv3000/uvpip/releases/latest/download/uvpip-windows-$archName.exe" -OutFile $candidate -UseBasicParsing
+        }
+        if ((Get-Item -LiteralPath $candidate).Length -eq 0) { throw 'uvpip binary is empty' }
+        if ($SHA256 -and (Get-FileHash -LiteralPath $candidate -Algorithm SHA256).Hash -ine $SHA256) {
+            throw 'SHA256 mismatch'
+        }
+        $checkPath = $candidate
     } else {
-        Write-OK "Already in System PATH"
+        $checkPath = $exePath
     }
-} catch {
-    Write-WRN "Could not update System PATH automatically."
-    Write-NFO "Run this manually as Administrator:"
-    Write-NFO "[Environment]::SetEnvironmentVariable('PATH', '$binDir;' + [Environment]::GetEnvironmentVariable('PATH','Machine'), 'Machine')"
-}
+    $global:LASTEXITCODE = $null
+    & $checkPath --version | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'uvpip executable check failed' }
 
-# --- Step 10: Refresh current session PATH -----------------------------------
-try {
-    if ($env:PATH -notlike "*$binDir*") {
-        $env:PATH = "$binDir;$env:PATH"
+    # Download the official uv installer completely before executing it.
+    if (-not (Get-Command uv -ErrorAction SilentlyContinue)) {
+        $uvInstaller = Join-Path $stage 'install-uv.ps1'
+        Invoke-WebRequest -Uri 'https://astral.sh/uv/install.ps1' -OutFile $uvInstaller -UseBasicParsing
+        if ((Get-Item -LiteralPath $uvInstaller).Length -eq 0) { throw 'uv installer download was empty' }
+        & powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File $uvInstaller
+        if ($LASTEXITCODE -ne 0) { throw 'uv installation failed' }
+        $env:PATH = (Join-Path $env:USERPROFILE '.local\bin') + ';' + $env:PATH
     }
-    Write-OK "Refreshed current session PATH"
-} catch {
-    Write-WRN "Could not refresh session PATH. Restart your terminal."
-}
+    $global:LASTEXITCODE = $null
+    & uv --version | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'uv executable check failed' }
 
-# --- Step 11: Verify install -------------------------------------------------
-try {
-    $testOutput = & "$exePath" --version 2>&1
-    if ($LASTEXITCODE -eq 0) {
-        Write-OK "uvpip verified: $testOutput"
-    } else {
-        Write-WRN "uvpip binary ran but returned non-zero exit code"
+    [IO.Directory]::CreateDirectory($binDir) | Out-Null
+    if (Test-Path -LiteralPath $candidate) { Move-Item -LiteralPath $candidate -Destination $exePath }
+    $shim = "@echo off`r`n`"%~dp0uvpip.exe`" %*`r`nexit /b %errorlevel%`r`n"
+    foreach ($name in 'pip.cmd', 'pip3.cmd') {
+        [IO.File]::WriteAllText((Join-Path $binDir $name), $shim, [Text.Encoding]::ASCII)
     }
-} catch {
-    Write-WRN "Could not verify uvpip binary: $($_.Exception.Message)"
+    if (-not $NoProfile) { Add-UvpipProfile }
+    if (-not $NoPath) {
+        $currentPath = [Environment]::GetEnvironmentVariable('PATH', 'User')
+        if (-not (@($currentPath -split ';' | Where-Object { Test-UvpipPath $_ }).Count)) {
+            $newPath = $binDir
+            if ($currentPath) { $newPath += ';' + $currentPath }
+            [Environment]::SetEnvironmentVariable('PATH', $newPath, 'User')
+        }
+        if (-not (@($env:PATH -split ';' | Where-Object { Test-UvpipPath $_ }).Count)) {
+            $env:PATH = "$binDir;$env:PATH"
+        }
+        $machinePath = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
+        if (@($machinePath -split ';' | Where-Object { Test-UvpipPath $_ }).Count) {
+            Write-Warning "Legacy System PATH entry found: $binDir. Remove it manually if needed; this installer never elevates or edits System PATH."
+        }
+    }
+    Write-Host 'uvpip installed. Restart your terminal. Existing pip and uv were not removed.'
+} finally {
+    Remove-Item -LiteralPath $stage -Recurse -Force
 }
-
-# --- Done ---------------------------------------------------------------------
-Write-Host ""
-Write-Host "  ----------------------------------------" -ForegroundColor DarkGray
-Write-Host ""
-Write-OK "uvpip installed successfully"
-Write-OK "pip and pip3 now run through uv (10-100x faster)"
-Write-Host ""
-Write-NFO "IMPORTANT: Restart your terminal for PATH changes to take full effect."
-Write-NFO "Then run: pip install requests"
-Write-NFO "Or run:   uvpip doctor    to verify everything is working."
-Write-Host ""

@@ -1,2 +1,3 @@
 @echo off
-"%USERPROFILE%\.uvpip\bin\uvpip.exe" %*
+"%~dp0uvpip.exe" %*
+exit /b %errorlevel%

@@ -1,154 +1,136 @@
 package main
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
+	"path/filepath"
 	"runtime"
 	"strings"
 )
 
-// runUV executes: uv <args> with full stdio inheritance.
-// Returns the process exit code.
-// stdio is ALWAYS inherited — this is critical for interactive tools to work.
-func runUV(args []string) int {
+// runUV never invokes a shell or downloads code. Streams pass through unchanged.
+func runUV(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	uvPath, err := findUV()
 	if err != nil {
-		// uv not found — try to auto-install it
-		fmt.Fprintln(os.Stderr, "[uvpip] uv not found. Attempting auto-install...")
-		if installErr := autoInstallUV(); installErr != nil {
-			fmt.Fprintf(os.Stderr, "[uvpip] auto-install failed: %v\n", installErr)
-			fmt.Fprintln(os.Stderr, "[uvpip] Please install uv manually: https://docs.astral.sh/uv/getting-started/installation/")
-			return 1
-		}
-		uvPath, err = findUV()
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "[uvpip] uv still not found after install: %v\n", err)
-			return 1
-		}
+		fmt.Fprintf(stderr, "[uvpip] %v; install uv: https://docs.astral.sh/uv/getting-started/installation/\n", err)
+		return 127
 	}
-
 	cmd := exec.Command(uvPath, args...)
-
-	// CRITICAL: inherit all three stdio streams
-	// This ensures interactive output, progress bars, prompts all work correctly
-	cmd.Stdin = os.Stdin
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-
-	// Set environment overrides so scaffold tools and child processes
-	// that call pip internally also route through uv
-	cmd.Env = buildEnv(uvPath)
-
+	cmd.Stdin, cmd.Stdout, cmd.Stderr = stdin, stdout, stderr
+	cmd.Env = buildEnv(os.Environ())
 	if err := cmd.Run(); err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return exitErr.ExitCode()
+		var exitErr *exec.ExitError
+		if errors.As(err, &exitErr) {
+			if code := exitErr.ExitCode(); code >= 0 {
+				return code
+			}
+			return 1 // A signal has no portable process exit code.
 		}
-		return 1
+		fmt.Fprintf(stderr, "[uvpip] cannot execute uv at %q: %v\n", uvPath, err)
+		return 126
 	}
 	return 0
 }
 
-// findUV searches for the uv binary on the current system.
 func findUV() (string, error) {
-	// First try: PATH lookup
-	if path, err := exec.LookPath("uv"); err == nil {
-		return path, nil
-	}
-
-	// Second try: common install locations per OS
-	candidates := uvCandidatePaths()
-	for _, p := range candidates {
-		if _, err := os.Stat(p); err == nil {
-			return p, nil
+	path := os.Getenv("UVPIP_UV")
+	var err error
+	if path != "" {
+		if !filepath.IsAbs(path) {
+			return "", fmt.Errorf("UVPIP_UV must be an absolute executable path")
+		}
+		path, err = exec.LookPath(path)
+		if err != nil {
+			return "", fmt.Errorf("UVPIP_UV: %w", err)
+		}
+	} else {
+		path, err = lookupUV(exec.LookPath, uvCandidatePaths())
+		if err != nil {
+			return "", err
 		}
 	}
-
-	return "", fmt.Errorf("uv binary not found")
+	self, err := os.Executable()
+	if err != nil {
+		return "", fmt.Errorf("locate uvpip executable: %w", err)
+	}
+	selfInfo, err := os.Stat(self)
+	if err != nil {
+		return "", fmt.Errorf("inspect uvpip executable: %w", err)
+	}
+	uvInfo, err := os.Stat(path)
+	if err != nil {
+		return "", fmt.Errorf("inspect uv executable: %w", err)
+	}
+	if os.SameFile(selfInfo, uvInfo) {
+		return "", fmt.Errorf("uv resolves to uvpip itself; refusing recursive execution")
+	}
+	return path, nil
 }
 
-// uvCandidatePaths returns platform-specific locations where uv might be installed.
+func lookupUV(lookPath func(string) (string, error), candidates []string) (string, error) {
+	if path, err := lookPath("uv"); err == nil {
+		return path, nil
+	} else if errors.Is(err, exec.ErrDot) {
+		return "", fmt.Errorf("refusing uv from the current directory: %w", err)
+	}
+	for _, candidate := range candidates {
+		if path, err := lookPath(candidate); err == nil {
+			return path, nil
+		}
+	}
+	return "", fmt.Errorf("uv executable not found")
+}
+
 func uvCandidatePaths() []string {
 	home, _ := os.UserHomeDir()
-
-	switch runtime.GOOS {
-	case "windows":
-		appdata := os.Getenv("APPDATA")
-		localappdata := os.Getenv("LOCALAPPDATA")
-		return []string{
-			home + `\.cargo\bin\uv.exe`,
-			home + `\.local\bin\uv.exe`,
-			appdata + `\astral\uv\bin\uv.exe`,
-			localappdata + `\Programs\uv\uv.exe`,
-		}
-	case "darwin", "linux":
-		return []string{
-			home + "/.local/bin/uv",
-			home + "/.cargo/bin/uv",
-			"/usr/local/bin/uv",
-			"/opt/homebrew/bin/uv",
-			"/usr/bin/uv",
-		}
-	default:
-		return []string{home + "/.local/bin/uv"}
+	var paths []string
+	name := "uv"
+	if runtime.GOOS == "windows" {
+		name += ".exe"
 	}
+	if home != "" {
+		paths = append(paths, filepath.Join(home, ".local", "bin", name), filepath.Join(home, ".cargo", "bin", name))
+	}
+	if runtime.GOOS == "windows" {
+		if dir := os.Getenv("APPDATA"); dir != "" {
+			paths = append(paths, filepath.Join(dir, "astral", "uv", "bin", name))
+		}
+		if dir := os.Getenv("LOCALAPPDATA"); dir != "" {
+			paths = append(paths, filepath.Join(dir, "Programs", "uv", name))
+		}
+	} else {
+		paths = append(paths, "/usr/local/bin/uv", "/opt/homebrew/bin/uv", "/usr/bin/uv")
+	}
+	absPaths := paths[:0]
+	for _, path := range paths {
+		if filepath.IsAbs(path) {
+			absPaths = append(absPaths, path)
+		}
+	}
+	return absPaths
 }
 
-// autoInstallUV installs uv using the official installer for the current OS.
-func autoInstallUV() error {
-	switch runtime.GOOS {
-	case "windows":
-		cmd := exec.Command("powershell", "-ExecutionPolicy", "Bypass",
-			"-Command", "irm https://astral.sh/uv/install.ps1 | iex")
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		return cmd.Run()
-	case "darwin", "linux":
-		cmd := exec.Command("sh", "-c", "curl -fsSL https://astral.sh/uv/install.sh | sh")
-		cmd.Stdin = os.Stdin
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		return cmd.Run()
-	default:
-		return fmt.Errorf("unsupported OS: %s", runtime.GOOS)
-	}
-}
-
-// buildEnv constructs the environment for the uv subprocess.
-// Sets overrides so child processes that call pip also use uv.
-func buildEnv(uvPath string) []string {
-	env := os.Environ()
-
-	// Only set UV_SYSTEM_PYTHON if no virtualenv is currently active.
-	// Detect an active venv via the VIRTUAL_ENV environment variable, which
-	// is set by every standard venv/virtualenv activation script.
-	_, venvActive := os.LookupEnv("VIRTUAL_ENV")
-
-	overrides := map[string]string{
-		// Points any child "pip" call at our uvpip binary so nested installs also go through uv
-		"PIP_PYTHON": uvPath,
-	}
-
-	if !venvActive {
-		// No venv active: let uv target the system interpreter so `pip install X`
-		// works even when the user hasn't created a venv (matches plain pip's behavior).
-		overrides["UV_SYSTEM_PYTHON"] = "1"
-	}
-	// If a venv IS active, do not set UV_SYSTEM_PYTHON at all — uv will
-	// correctly detect and use the active venv on its own, exactly like
-	// plain `uv pip install` does today.
-
-	// Build final env — overrides win over existing values
-	result := []string{}
-	for _, e := range env {
-		key := strings.SplitN(e, "=", 2)[0]
-		if _, overridden := overrides[key]; !overridden {
-			result = append(result, e)
+// Respect explicit uv settings; otherwise match pip's activated-venv/system choice.
+func buildEnv(env []string) []string {
+	venv, configured := false, false
+	for _, entry := range env {
+		key, value, _ := strings.Cut(entry, "=")
+		if runtime.GOOS == "windows" {
+			key = strings.ToUpper(key)
+		}
+		if (key == "VIRTUAL_ENV" || key == "CONDA_PREFIX") && value != "" {
+			venv = true
+		}
+		if key == "UV_SYSTEM_PYTHON" {
+			configured = true
 		}
 	}
-	for k, v := range overrides {
-		result = append(result, k+"="+v)
+	result := append([]string{}, env...)
+	if !venv && !configured {
+		result = append(result, "UV_SYSTEM_PYTHON=1")
 	}
 	return result
 }

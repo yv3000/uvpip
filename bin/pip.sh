@@ -1,2 +1,2 @@
 #!/usr/bin/env sh
-exec "$HOME/.uvpip/bin/uvpip" "$@"
+exec "$(dirname "$0")/uvpip" "$@"

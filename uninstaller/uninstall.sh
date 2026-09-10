@@ -1,78 +1,54 @@
-#!/usr/bin/env bash
-# uninstall.sh — uvpip uninstaller for macOS and Linux
-# Run with: curl -fsSL https://raw.githubusercontent.com/yv3000/uvpip/main/uninstaller/uninstall.sh | sh
+#!/bin/sh
+# Remove uvpip-owned files and complete, exact profile blocks only.
+set -eu
+: "${HOME:?HOME must be set}"
+BIN_DIR="$HOME/.uvpip/bin"
+STAGE=$(mktemp -d "${TMPDIR:-/tmp}/uvpip-uninstall.XXXXXX")
+trap 'rm -rf "$STAGE"' 0
+trap 'exit 1' HUP INT TERM
 
-set -e
-
-INSTALL_DIR="$HOME/.uvpip"
-BIN_DIR="$INSTALL_DIR/bin"
-
-ok()  { printf "  [OK] %s\n" "$1"; }
-wrn() { printf "  [!!] %s\n" "$1"; }
-err() { printf "  [ERR] %s\n" "$1" >&2; exit 1; }
-nfo() { printf "  [->] %s\n" "$1"; }
-
-echo ""
-echo "  uvpip uninstaller for macOS / Linux"
-echo "  ----------------------------------------"
-echo ""
-
-# ─── Step 1: Check if installed ──────────────────────────────────────────────
-if [ ! -d "$INSTALL_DIR" ]; then
-    wrn "uvpip does not appear to be installed (no directory at $INSTALL_DIR)"
-    exit 0
-fi
-
-# ─── Step 2: Remove PATH entry from shell configs ────────────────────────────
 remove_from_config() {
-    local config_file="$1"
-    if [ -f "$config_file" ] && grep -q "uvpip" "$config_file" 2>/dev/null; then
-        # Remove uvpip comment, PATH lines, and shell function blocks
-        if sed --version 2>/dev/null | grep -q GNU; then
-            # GNU sed (Linux)
-            sed -i '/# --- uvpip start ---/,/# --- uvpip end ---/d' "$config_file"
-            sed -i '/# uvpip/d' "$config_file"
-            sed -i '/\.uvpip/d' "$config_file"
-        else
-            # BSD sed (macOS)
-            sed -i '' '/# --- uvpip start ---/,/# --- uvpip end ---/d' "$config_file"
-            sed -i '' '/# uvpip/d' "$config_file"
-            sed -i '' '/\.uvpip/d' "$config_file"
-        fi
-        ok "Removed uvpip PATH entry and functions from $config_file"
+    config=$1
+    [ -f "$config" ] || return 0
+    awk '{ sub(/\r$/, "") }
+        $0 == "# --- uvpip start ---" { if (inside) exit 1; inside=1 }
+        $0 == "# --- uvpip end ---" { if (!inside) exit 1; inside=0 }
+        END { if (inside) exit 1 }' "$config" || {
+            printf 'uvpip: Unbalanced markers in %s; file left unchanged. Repair manually and retry.\n' "$config" >&2
+            exit 1
+        }
+    # read/printf retain CRLF and a missing final newline outside the block.
+    inside=0
+    CR=$(printf '\r')
+    while :; do
+        line=
+        newline=1
+        IFS= read -r line || newline=0
+        [ "$newline" = 1 ] || [ -n "$line" ] || break
+        case "${line%"$CR"}" in
+            '# --- uvpip start ---') inside=1 ;;
+            '# --- uvpip end ---') inside=0 ;;
+            *)
+                if [ "$inside" = 0 ]; then
+                    printf '%s' "$line"
+                    if [ "$newline" = 1 ]; then printf '\n'; fi
+                fi
+                ;;
+        esac
+        [ "$newline" = 1 ] || break
+    done < "$config" > "$STAGE/profile"
+    if ! cmp -s "$config" "$STAGE/profile"; then
+        cat "$STAGE/profile" > "$config"
     fi
 }
 
-remove_from_config "$HOME/.zshrc"
-remove_from_config "$HOME/.zprofile"
-remove_from_config "$HOME/.bashrc"
-remove_from_config "$HOME/.bash_profile"
-remove_from_config "$HOME/.profile"
-
-FISH_CONFIG="$HOME/.config/fish/config.fish"
-if [ -f "$FISH_CONFIG" ] && grep -q "uvpip" "$FISH_CONFIG" 2>/dev/null; then
-    if sed --version 2>/dev/null | grep -q GNU; then
-        sed -i '/# --- uvpip start ---/,/# --- uvpip end ---/d' "$FISH_CONFIG"
-        sed -i '/# uvpip/d' "$FISH_CONFIG"
-        sed -i '/\.uvpip/d' "$FISH_CONFIG"
-    else
-        sed -i '' '/# --- uvpip start ---/,/# --- uvpip end ---/d' "$FISH_CONFIG"
-        sed -i '' '/# uvpip/d' "$FISH_CONFIG"
-        sed -i '' '/\.uvpip/d' "$FISH_CONFIG"
-    fi
-    ok "Removed uvpip PATH entry and functions from $FISH_CONFIG"
+if [ "${UVPIP_NO_PROFILE:-0}" != 1 ]; then
+    for config in "$HOME/.zshrc" "$HOME/.zprofile" "$HOME/.bashrc" \
+        "$HOME/.bash_profile" "$HOME/.profile" "$HOME/.config/fish/config.fish"; do
+        remove_from_config "$config"
+    done
 fi
-
-# ─── Step 3: Delete install directory ────────────────────────────────────────
-rm -rf "$INSTALL_DIR"
-ok "Deleted $INSTALL_DIR"
-
-# ─── Done ─────────────────────────────────────────────────────────────────────
-echo ""
-echo "  ----------------------------------------"
-echo ""
-ok "uvpip uninstalled"
-ok "Original pip restored"
-nfo "uv itself was NOT removed. You may still use it directly."
-nfo "Restart your terminal for changes to take full effect."
-echo ""
+# Do not recursively delete a directory that may contain unrelated user files.
+rm -f "$BIN_DIR/uvpip" "$BIN_DIR/pip" "$BIN_DIR/pip3"
+rmdir "$BIN_DIR" "$HOME/.uvpip" 2>/dev/null || :
+printf '%s\n' 'uvpip uninstalled. Restart your terminal. Existing pip and uv were not removed.'

@@ -1,148 +1,72 @@
 package main
 
 import (
+	"context"
 	"fmt"
+	"io"
 	"os"
 	"os/exec"
-	"runtime"
 	"strings"
+	"time"
 )
 
-// runDoctor prints a health report for the uvpip installation.
-func runDoctor() {
-	fmt.Println("")
-	fmt.Println("  uvpip doctor")
-	fmt.Println("  ----------------------------------------")
-	fmt.Println("")
-
-	allOK := true
-
-	// Check 1: uvpip binary
-	selfPath, _ := os.Executable()
-	checkLine("uvpip binary", selfPath, true)
-
-	// Check 2: uv
-	uvPath, uvErr := findUV()
-	if uvErr != nil {
-		checkLine("uv", "NOT FOUND — run installer or: curl -fsSL https://astral.sh/uv/install.sh | sh", false)
-		allOK = false
-	} else {
-		uvVersion := ""
-		out, err := exec.Command(uvPath, "--version").Output()
-		if err == nil {
-			uvVersion = strings.TrimSpace(string(out))
-		}
-		checkLine("uv", fmt.Sprintf("found at %s  (%s)", uvPath, uvVersion), true)
-	}
-
-	// Check 3: pip shim active
-	pipPath, pipErr := exec.LookPath("pip")
-	if pipErr != nil {
-		checkLine("pip shim", "pip not found in PATH", false)
-		allOK = false
-	} else {
-		isOurShim := isUvpipShim(pipPath)
-		if isOurShim {
-			checkLine("pip shim", fmt.Sprintf("active — %s", pipPath), true)
+// Doctor checks executables, not parent-shell aliases/functions it cannot observe.
+func runDoctor(out io.Writer) int {
+	fmt.Fprintln(out, "uvpip doctor (PATH executables; shell functions are not visible)")
+	code := 0
+	for _, name := range []string{"uv", "pip", "pip3", "python"} {
+		var path string
+		var err error
+		if name == "uv" {
+			path, err = findUV()
 		} else {
-			checkLine("pip shim", fmt.Sprintf("WARNING — pip resolves to real pip at %s (uvpip is not first in PATH)", pipPath), false)
-			allOK = false
-		}
-	}
-
-	// Check 4: pip3 shim active
-	pip3Path, pip3Err := exec.LookPath("pip3")
-	if pip3Err != nil {
-		checkLine("pip3 shim", "pip3 not found in PATH", false)
-	} else {
-		isOurShim := isUvpipShim(pip3Path)
-		if isOurShim {
-			checkLine("pip3 shim", fmt.Sprintf("active — %s", pip3Path), true)
-		} else {
-			checkLine("pip3 shim", fmt.Sprintf("WARNING — pip3 resolves to real pip3 at %s", pip3Path), false)
-			allOK = false
-		}
-	}
-
-	// Check 5: PATH order
-	pathEnv := os.Getenv("PATH")
-	var sep string
-	if runtime.GOOS == "windows" {
-		sep = ";"
-	} else {
-		sep = ":"
-	}
-	entries := strings.Split(pathEnv, sep)
-	uvpipBinIndex := -1
-	realPipIndex := -1
-	for i, e := range entries {
-		if strings.Contains(strings.ToLower(e), ".uvpip") || strings.Contains(strings.ToLower(e), "uvpip") {
-			if uvpipBinIndex == -1 {
-				uvpipBinIndex = i
+			path, err = exec.LookPath(name)
+			if name == "python" && err != nil {
+				path, err = exec.LookPath("python3")
 			}
 		}
-		// Common real pip locations
-		if strings.Contains(strings.ToLower(e), "python") ||
-			strings.Contains(strings.ToLower(e), "site-packages") ||
-			strings.Contains(strings.ToLower(e), "scripts") {
-			if realPipIndex == -1 {
-				realPipIndex = i
+		if err == nil {
+			if name == "pip" || name == "pip3" {
+				if !isUvpipShim(path) {
+					err = fmt.Errorf("%s is not a recognized uvpip shim; check PATH precedence", path)
+				}
+			} else {
+				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+				output, runErr := exec.CommandContext(ctx, path, "--version").Output()
+				cancel()
+				err = runErr
+				if err == nil {
+					path += " (" + strings.TrimSpace(string(output)) + ")"
+				}
 			}
 		}
-	}
-	if uvpipBinIndex != -1 && (realPipIndex == -1 || uvpipBinIndex < realPipIndex) {
-		checkLine("PATH order", "uvpip bin is before Python/pip in PATH", true)
-	} else if uvpipBinIndex == -1 {
-		checkLine("PATH order", "uvpip bin directory not found in PATH — restart your terminal", false)
-		allOK = false
-	} else {
-		checkLine("PATH order", "WARNING — a Python/pip path appears before uvpip in PATH", false)
-		allOK = false
-	}
-
-	// Check 6: Python
-	pythonPath, pythonErr := exec.LookPath("python")
-	if pythonErr != nil {
-		pythonPath, pythonErr = exec.LookPath("python3")
-	}
-	if pythonErr != nil {
-		checkLine("Python", "not found in PATH", false)
-	} else {
-		out, err := exec.Command(pythonPath, "--version").Output()
-		if err == nil {
-			checkLine("Python", fmt.Sprintf("found (%s) at %s", strings.TrimSpace(string(out)), pythonPath), true)
+		if err != nil {
+			fmt.Fprintf(out, "[!!] %s: %v\n", name, err)
+			code = 1
 		} else {
-			checkLine("Python", fmt.Sprintf("found at %s", pythonPath), true)
+			fmt.Fprintf(out, "[OK] %s: %s\n", name, path)
 		}
 	}
-
-	fmt.Println("")
-	fmt.Println("  ----------------------------------------")
-	if allOK {
-		fmt.Println("  All checks passed. uvpip is working correctly.")
-	} else {
-		fmt.Println("  Some checks failed. Restart your terminal, then run 'uvpip doctor' again.")
-		fmt.Println("  If issues persist, re-run the installer.")
+	if code != 0 {
+		fmt.Fprintln(out, "Check your installation and restart the shell. Use python -m pip to bypass uvpip.")
 	}
-	fmt.Println("")
+	return code
 }
 
-func checkLine(label, detail string, ok bool) {
-	status := "[OK] "
-	if !ok {
-		status = "[!!] "
-	}
-	fmt.Printf("  %s %-18s %s\n", status, label, detail)
-}
-
-// isUvpipShim returns true if the binary at path is our uvpip shim.
-// On Windows: checks if pip.cmd references uvpip.exe
-// On Unix: checks if the file references uvpip
 func isUvpipShim(path string) bool {
-	data, err := os.ReadFile(path)
+	file, err := os.Open(path)
 	if err != nil {
 		return false
 	}
+	defer file.Close()
+	data, err := io.ReadAll(io.LimitReader(file, 4097))
+	if err != nil || len(data) > 4096 || strings.ContainsRune(string(data), 0) {
+		return false
+	}
 	content := strings.ToLower(string(data))
-	return strings.Contains(content, "uvpip")
+	// Recognize our shipped text shims, not arbitrary binaries containing our name.
+	return strings.Contains(content, `exec "$(dirname "$0")/uvpip" "$@"`) ||
+		strings.Contains(content, `exec "$home/.uvpip/bin/uvpip" "$@"`) ||
+		strings.Contains(content, `"%~dp0uvpip.exe" %*`) ||
+		strings.Contains(content, `"%userprofile%\.uvpip\bin\uvpip.exe" %*`)
 }

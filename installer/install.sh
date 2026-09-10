@@ -1,229 +1,140 @@
-#!/usr/bin/env bash
-# install.sh — uvpip installer for macOS and Linux
-# Run with: curl -fsSL https://raw.githubusercontent.com/yv3000/uvpip/main/installer/install.sh | sh
+#!/bin/sh
+# uvpip installer for macOS and Linux. Local/offline binary: UVPIP_BINARY=/path/to/uvpip.
+set -eu
 
-set -e
-
-INSTALL_DIR="$HOME/.uvpip"
-BIN_DIR="$INSTALL_DIR/bin"
+: "${HOME:?HOME must be set}"
+BIN_DIR="$HOME/.uvpip/bin"
 RELEASE_BASE="https://github.com/yv3000/uvpip/releases/latest/download"
-
-ok()  { printf "  [OK] %s\n" "$1"; }
-wrn() { printf "  [!!] %s\n" "$1"; }
-err() { printf "  [ERR] %s\n" "$1" >&2; exit 1; }
-nfo() { printf "  [->] %s\n" "$1"; }
-
-echo ""
-echo "  uvpip installer for macOS / Linux"
-echo "  ----------------------------------------"
-echo ""
-
-# ─── Step 1: Detect OS and architecture ──────────────────────────────────────
-OS="$(uname -s)"
-ARCH="$(uname -m)"
-
-case "$OS" in
-    Darwin)  OS_NAME="darwin" ;;
-    Linux)   OS_NAME="linux" ;;
-    *)       err "Unsupported OS: $OS" ;;
-esac
-
-case "$ARCH" in
-    x86_64)          ARCH_NAME="amd64" ;;
-    aarch64|arm64)   ARCH_NAME="arm64" ;;
-    *)               err "Unsupported architecture: $ARCH" ;;
-esac
-
-BINARY_NAME="uvpip-${OS_NAME}-${ARCH_NAME}"
-ok "Detected: $OS_NAME / $ARCH_NAME -> $BINARY_NAME"
-
-# ─── Step 2: Check if already installed ──────────────────────────────────────
-if [ -f "$BIN_DIR/uvpip" ]; then
-    wrn "uvpip is already installed at $BIN_DIR/uvpip"
-    nfo "To reinstall, run the uninstaller first:"
-    nfo "curl -fsSL https://raw.githubusercontent.com/yv3000/uvpip/main/uninstaller/uninstall.sh | sh"
-    echo ""
-    exit 0
-fi
-
-# ─── Step 3: Check / install uv ──────────────────────────────────────────────
-UV_PATH=""
-if command -v uv >/dev/null 2>&1; then
-    UV_VER="$(uv --version 2>/dev/null || echo 'unknown')"
-    ok "uv already installed: $UV_VER"
-    UV_PATH="$(command -v uv)"
-else
-    nfo "uv not found. Installing uv automatically..."
-    if curl -fsSL https://astral.sh/uv/install.sh | sh; then
-        # Refresh PATH in current shell
-        export PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
-        if command -v uv >/dev/null 2>&1; then
-            UV_VER="$(uv --version 2>/dev/null || echo 'unknown')"
-            ok "uv installed: $UV_VER"
-            UV_PATH="$(command -v uv)"
-        else
-            err "uv installed but not found in PATH. Try: export PATH=\"\$HOME/.local/bin:\$PATH\" then re-run."
-        fi
+err() { printf 'uvpip: %s\n' "$*" >&2; exit 1; }
+download() {
+    if command -v curl >/dev/null 2>&1; then
+        curl -fLSs "$1" -o "$2" || return 1
+    elif command -v wget >/dev/null 2>&1; then
+        wget -q "$1" -O "$2" || return 1
     else
-        err "Failed to install uv. Install manually: https://docs.astral.sh/uv/getting-started/installation/"
+        err 'curl or wget is required to download files'
     fi
-fi
-
-# ─── Step 4: Check pip / Python ──────────────────────────────────────────────
-if command -v pip >/dev/null 2>&1; then
-    PIP_VER="$(pip --version 2>/dev/null || echo 'unknown')"
-    ok "pip already available: $PIP_VER"
-elif command -v pip3 >/dev/null 2>&1; then
-    PIP_VER="$(pip3 --version 2>/dev/null || echo 'unknown')"
-    ok "pip3 available: $PIP_VER"
-elif command -v python3 >/dev/null 2>&1; then
-    ok "Python3 found but pip missing. uvpip will use uv directly."
-else
-    wrn "Neither pip nor Python found. uvpip will use uv directly."
-fi
-
-# ─── Step 5: Create install directory ────────────────────────────────────────
-mkdir -p "$BIN_DIR"
-ok "Created $INSTALL_DIR"
-
-# ─── Step 6: Download uvpip binary ───────────────────────────────────────────
-DOWNLOAD_URL="$RELEASE_BASE/$BINARY_NAME"
-nfo "Downloading $BINARY_NAME from GitHub releases..."
-
-if command -v curl >/dev/null 2>&1; then
-    curl -fsSL "$DOWNLOAD_URL" -o "$BIN_DIR/uvpip"
-elif command -v wget >/dev/null 2>&1; then
-    wget -q "$DOWNLOAD_URL" -O "$BIN_DIR/uvpip"
-else
-    err "Neither curl nor wget found. Install one and retry."
-fi
-
-chmod +x "$BIN_DIR/uvpip"
-ok "Downloaded uvpip binary to $BIN_DIR/uvpip"
-
-# ─── Step 7: Create pip and pip3 shim scripts ────────────────────────────────
-cat > "$BIN_DIR/pip" << 'SHIMEOF'
-#!/usr/bin/env sh
-exec "$(dirname "$0")/uvpip" "$@"
-SHIMEOF
-
-cat > "$BIN_DIR/pip3" << 'SHIMEOF'
-#!/usr/bin/env sh
-exec "$(dirname "$0")/uvpip" "$@"
-SHIMEOF
-
-chmod +x "$BIN_DIR/pip" "$BIN_DIR/pip3"
-ok "Created pip and pip3 shim scripts"
-
-# ─── Step 8: Add to PATH in shell config ─────────────────────────────────────
-SHELL_NAME="$(basename "${SHELL:-sh}")"
-PATH_EXPORT="export PATH=\"$BIN_DIR:\$PATH\""
-
-add_to_shell_config() {
-    local config_file="$1"
-    if [ -f "$config_file" ] || [ "$2" = "force" ]; then
-        if ! grep -q "uvpip start" "$config_file" 2>/dev/null; then
-            # Clean up old v1 entries before adding the new block
-            if sed --version 2>/dev/null | grep -q GNU; then
-                sed -i '/# uvpip/d' "$config_file"
-                sed -i '/\.uvpip/d' "$config_file"
-            else
-                sed -i '' '/# uvpip/d' "$config_file"
-                sed -i '' '/\.uvpip/d' "$config_file"
-            fi
-            
-            echo "" >> "$config_file"
-            echo "# --- uvpip start ---" >> "$config_file"
-            echo "$PATH_EXPORT" >> "$config_file"
-            echo "pip() {" >> "$config_file"
-            echo "    \"\$HOME/.uvpip/bin/uvpip\" \"\$@\"" >> "$config_file"
-            echo "}" >> "$config_file"
-            echo "pip3() {" >> "$config_file"
-            echo "    \"\$HOME/.uvpip/bin/uvpip\" \"\$@\"" >> "$config_file"
-            echo "}" >> "$config_file"
-            echo "export -f pip pip3" >> "$config_file"
-            echo "# --- uvpip end ---" >> "$config_file"
-            ok "Added PATH entry and shell functions to $config_file"
-            return 0
-        else
-            wrn "PATH entry/functions already in $config_file"
-            return 0
-        fi
-    fi
-    return 1
+    [ -s "$2" ]
 }
 
-PATH_ADDED=false
-
-case "$SHELL_NAME" in
-    zsh)
-        add_to_shell_config "$HOME/.zshrc" force && PATH_ADDED=true
-        add_to_shell_config "$HOME/.zprofile"
-        ;;
-    bash)
-        if [ "$OS_NAME" = "darwin" ]; then
-            add_to_shell_config "$HOME/.bash_profile" force && PATH_ADDED=true
-        fi
-        add_to_shell_config "$HOME/.bashrc" force && PATH_ADDED=true
-        ;;
-    fish)
-        FISH_CONFIG="$HOME/.config/fish/config.fish"
-        mkdir -p "$(dirname "$FISH_CONFIG")"
-        if ! grep -q "uvpip start" "$FISH_CONFIG" 2>/dev/null; then
-            if sed --version 2>/dev/null | grep -q GNU; then
-                sed -i '/# uvpip/d' "$FISH_CONFIG"
-                sed -i '/\.uvpip/d' "$FISH_CONFIG"
-            else
-                sed -i '' '/# uvpip/d' "$FISH_CONFIG"
-                sed -i '' '/\.uvpip/d' "$FISH_CONFIG"
-            fi
-
-            echo "" >> "$FISH_CONFIG"
-            echo "# --- uvpip start ---" >> "$FISH_CONFIG"
-            echo "fish_add_path $BIN_DIR" >> "$FISH_CONFIG"
-            echo "function pip" >> "$FISH_CONFIG"
-            echo "    \"\$HOME/.uvpip/bin/uvpip\" \$argv" >> "$FISH_CONFIG"
-            echo "end" >> "$FISH_CONFIG"
-            echo "function pip3" >> "$FISH_CONFIG"
-            echo "    \"\$HOME/.uvpip/bin/uvpip\" \$argv" >> "$FISH_CONFIG"
-            echo "end" >> "$FISH_CONFIG"
-            echo "# --- uvpip end ---" >> "$FISH_CONFIG"
-            ok "Added PATH entry and shell functions to $FISH_CONFIG"
-            PATH_ADDED=true
-        fi
-        ;;
-    *)
-        # Fallback: try common config files
-        add_to_shell_config "$HOME/.profile" force && PATH_ADDED=true
-        ;;
+case "$(uname -s)" in
+    Darwin) OS_NAME=darwin ;;
+    Linux) OS_NAME=linux ;;
+    *) err 'Unsupported OS' ;;
+esac
+case "$(uname -m)" in
+    x86_64) ARCH_NAME=amd64 ;;
+    aarch64|arm64) ARCH_NAME=arm64 ;;
+    *) err 'Unsupported architecture' ;;
 esac
 
-if [ "$PATH_ADDED" = false ]; then
-    wrn "Could not detect shell config file."
-    nfo "Add this line manually to your shell config:"
-    nfo "$PATH_EXPORT"
-fi
-
-# Refresh in current session
-export PATH="$BIN_DIR:$PATH"
-ok "Refreshed current session PATH"
-
-# ─── Step 9: Verify install ───────────────────────────────────────────────────
-if "$BIN_DIR/uvpip" --version >/dev/null 2>&1; then
-    VER="$("$BIN_DIR/uvpip" --version 2>/dev/null)"
-    ok "uvpip verified: $VER"
+# Only this private staging directory is removed on failure.
+STAGE=$(mktemp -d "${TMPDIR:-/tmp}/uvpip-install.XXXXXX")
+trap 'rm -rf "$STAGE"' 0
+trap 'exit 1' HUP INT TERM
+if [ ! -f "$BIN_DIR/uvpip" ]; then
+    if [ -n "${UVPIP_BINARY:-}" ]; then
+        cp "$UVPIP_BINARY" "$STAGE/uvpip" || err 'Could not copy UVPIP_BINARY'
+    else
+        download "$RELEASE_BASE/uvpip-$OS_NAME-$ARCH_NAME" "$STAGE/uvpip" || err 'uvpip download failed'
+    fi
+    [ -s "$STAGE/uvpip" ] || err 'uvpip binary is empty'
+    # Optional caller-supplied checksum, not a claim of release signature verification.
+    if [ -n "${UVPIP_SHA256:-}" ]; then
+        if command -v sha256sum >/dev/null 2>&1; then
+            HASH=$(sha256sum "$STAGE/uvpip")
+        elif command -v shasum >/dev/null 2>&1; then
+            HASH=$(shasum -a 256 "$STAGE/uvpip")
+        else
+            err 'sha256sum or shasum is required for UVPIP_SHA256'
+        fi
+        HASH=${HASH%% *}
+        [ "$HASH" = "$(printf '%s' "$UVPIP_SHA256" | tr 'A-F' 'a-f')" ] || err 'SHA256 mismatch'
+    fi
+    chmod +x "$STAGE/uvpip"
+    "$STAGE/uvpip" --version >/dev/null 2>&1 || err 'uvpip executable check failed'
 else
-    wrn "uvpip binary ran but could not verify version"
+    "$BIN_DIR/uvpip" --version >/dev/null 2>&1 || err 'Existing uvpip executable check failed'
 fi
 
-# ─── Done ─────────────────────────────────────────────────────────────────────
-echo ""
-echo "  ----------------------------------------"
-echo ""
-ok "uvpip installed successfully"
-ok "pip and pip3 now route through uv (10-100x faster)"
-echo ""
-nfo "IMPORTANT: Restart your terminal (or run: source ~/.zshrc) for PATH changes to take effect."
-nfo "Then run:  pip install requests"
-nfo "Or run:   uvpip doctor    to verify everything is working."
-echo ""
+# Keep explicit uv setup, but never execute a partial/failed download.
+if ! command -v uv >/dev/null 2>&1; then
+    download https://astral.sh/uv/install.sh "$STAGE/install-uv.sh" || err 'uv installer download failed'
+    sh "$STAGE/install-uv.sh" || err 'uv installation failed'
+    PATH="$HOME/.local/bin:$HOME/.cargo/bin:$PATH"
+    export PATH
+fi
+uv --version >/dev/null 2>&1 || err 'uv executable check failed'
+
+mkdir -p "$BIN_DIR"
+if [ -f "$STAGE/uvpip" ]; then
+    mv "$STAGE/uvpip" "$BIN_DIR/uvpip"
+fi
+for shim in pip pip3; do
+    cat > "$STAGE/$shim" <<'SHIM'
+#!/bin/sh
+exec "$(dirname "$0")/uvpip" "$@"
+SHIM
+    chmod +x "$STAGE/$shim"
+    mv "$STAGE/$shim" "$BIN_DIR/$shim"
+done
+
+add_to_config() {
+    config=$1
+    if [ -f "$config" ]; then
+        # Ambiguous/nested/unmatched markers must never trigger a rewrite.
+        awk '{ sub(/\r$/, "") }
+            $0 == "# --- uvpip start ---" { if (inside) exit 1; inside=1 }
+            $0 == "# --- uvpip end ---" { if (!inside) exit 1; inside=0 }
+            END { if (inside) exit 1 }' "$config" || err "Unbalanced uvpip markers in $config; repair them manually"
+        if awk '{ sub(/\r$/, "") } $0 == "# --- uvpip start ---" { found=1 } END { exit !found }' "$config"; then
+            return 0
+        fi
+    fi
+    mkdir -p "$(dirname "$config")"
+    if [ -s "$config" ] && [ -n "$(tail -c 1 "$config")" ]; then printf '\n' >> "$config"; fi
+    # Runtime HOME references avoid embedding shell-sensitive installation paths.
+    if [ "$SHELL_NAME" = fish ]; then
+        cat >> "$config" <<'PROFILE'
+# --- uvpip start ---
+fish_add_path "$HOME/.uvpip/bin"
+function pip
+    "$HOME/.uvpip/bin/uvpip" $argv
+end
+function pip3
+    "$HOME/.uvpip/bin/uvpip" $argv
+end
+# --- uvpip end ---
+PROFILE
+    else
+        cat >> "$config" <<'PROFILE'
+# --- uvpip start ---
+export PATH="$HOME/.uvpip/bin:$PATH"
+pip() {
+    "$HOME/.uvpip/bin/uvpip" "$@"
+}
+pip3() {
+    "$HOME/.uvpip/bin/uvpip" "$@"
+}
+# --- uvpip end ---
+PROFILE
+    fi
+}
+
+if [ "${UVPIP_NO_PROFILE:-0}" != 1 ]; then
+    SHELL_NAME=${SHELL:-sh}
+    SHELL_NAME=${SHELL_NAME##*/}
+    case "$SHELL_NAME" in
+        zsh)
+            add_to_config "$HOME/.zshrc"
+            if [ -f "$HOME/.zprofile" ]; then add_to_config "$HOME/.zprofile"; fi
+            ;;
+        bash)
+            if [ "$OS_NAME" = darwin ]; then add_to_config "$HOME/.bash_profile"; fi
+            add_to_config "$HOME/.bashrc"
+            ;;
+        fish) add_to_config "$HOME/.config/fish/config.fish" ;;
+        *) add_to_config "$HOME/.profile" ;;
+    esac
+fi
+printf '%s\n' 'uvpip installed. Restart your terminal to use it. Existing pip and uv were not removed.'

@@ -4,36 +4,60 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
 	"runtime"
 	"strings"
+	"time"
 )
 
 // runUV never invokes a shell or downloads code. Streams pass through unchanged.
-func runUV(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+// log receives opt-in diagnostics only; it never sees argument or env values.
+func runUV(args []string, stdin io.Reader, stdout, stderr io.Writer, log *slog.Logger) int {
+	source := "search"
+	if os.Getenv("UVPIP_UV") != "" {
+		source = "UVPIP_UV"
+	}
 	uvPath, err := findUV()
 	if err != nil {
+		log.Debug("uv discovery failed", "source", source, "error", err)
 		fmt.Fprintf(stderr, "[uvpip] %v; install uv: https://docs.astral.sh/uv/getting-started/installation/\n", err)
 		return 127
 	}
+	log.Debug("resolved uv", "path", uvPath, "source", source)
+	env := os.Environ()
+	childEnv := buildEnv(env)
+	log.Debug("prepared environment", "default_uv_system_python", len(childEnv) > len(env))
 	// uvPath comes from trusted discovery above (absolute override or PATH without ErrDot).
 	cmd := exec.Command(uvPath, args...) //nolint:gosec // G204: executing the resolved uv binary is the program's purpose.
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = stdin, stdout, stderr
-	cmd.Env = buildEnv(os.Environ())
-	if err := cmd.Run(); err != nil {
-		var exitErr *exec.ExitError
-		if errors.As(err, &exitErr) {
-			if code := exitErr.ExitCode(); code >= 0 {
-				return code
-			}
-			return 1 // A signal has no portable process exit code.
-		}
-		fmt.Fprintf(stderr, "[uvpip] cannot execute uv at %q: %v\n", uvPath, err)
-		return 126
+	cmd.Env = childEnv
+	start := time.Now()
+	code, startErr := exitCode(cmd.Run())
+	if startErr != nil {
+		fmt.Fprintf(stderr, "[uvpip] cannot execute uv at %q: %v\n", uvPath, startErr)
 	}
-	return 0
+	log.Debug("uv exited", "code", code, "duration", time.Since(start))
+	return code
+}
+
+// exitCode maps a child's Run error to uvpip's exit status: the child's own
+// code, 1 for signal termination (no portable code), or 126 with the start
+// error when the child never ran.
+func exitCode(err error) (int, error) {
+	if err == nil {
+		return 0, nil
+	}
+	var exitErr *exec.ExitError
+	if errors.As(err, &exitErr) {
+		if code := exitErr.ExitCode(); code >= 0 {
+			return code, nil
+		}
+		return 1, nil
+	}
+	return 126, err
 }
 
 func findUV() (string, error) {

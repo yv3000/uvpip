@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -14,6 +15,9 @@ import (
 	"strings"
 	"testing"
 )
+
+// quiet is the default (UVPIP_DEBUG unset) logger used by direct runUV tests.
+var quiet = slog.New(slog.DiscardHandler)
 
 // The test executable is an offline uv/Python fixture. No shell or network is used.
 func TestMain(m *testing.M) {
@@ -64,7 +68,7 @@ func TestRunUV(t *testing.T) {
 	t.Setenv("PIP_PYTHON", "user value")
 	args := []string{"pip", "install", "a b", "a;b", "$(do-not-run)", "x\"y", ""}
 	var stdout, stderr bytes.Buffer
-	if code := runUV(args, strings.NewReader("stdin unchanged"), &stdout, &stderr); code != 0 {
+	if code := runUV(args, strings.NewReader("stdin unchanged"), &stdout, &stderr, quiet); code != 0 {
 		t.Fatalf("exit %d: %s", code, &stderr)
 	}
 	var got struct {
@@ -82,7 +86,7 @@ func TestRunUV(t *testing.T) {
 	}
 	t.Setenv("UVPIP_TEST_MODE", "exit")
 	stderr.Reset()
-	if code := runUV(args, nil, io.Discard, &stderr); code != 23 || stderr.String() != "child failure" {
+	if code := runUV(args, nil, io.Discard, &stderr, quiet); code != 23 || stderr.String() != "child failure" {
 		t.Fatalf("exit %d stderr %q", code, &stderr)
 	}
 }
@@ -90,7 +94,7 @@ func TestRunUV(t *testing.T) {
 func TestRunUVFailures(t *testing.T) {
 	var stderr bytes.Buffer
 	t.Setenv("UVPIP_UV", filepath.Join(t.TempDir(), "missing.exe"))
-	if code := runUV(nil, nil, io.Discard, &stderr); code != 127 || !strings.Contains(stderr.String(), "install uv:") {
+	if code := runUV(nil, nil, io.Discard, &stderr, quiet); code != 127 || !strings.Contains(stderr.String(), "install uv:") {
 		t.Fatalf("code %d: %s", code, &stderr)
 	}
 	path := filepath.Join(t.TempDir(), "invalid.exe")
@@ -99,8 +103,24 @@ func TestRunUVFailures(t *testing.T) {
 	}
 	t.Setenv("UVPIP_UV", path)
 	stderr.Reset()
-	if code := runUV(nil, nil, io.Discard, &stderr); code != 126 || !strings.Contains(stderr.String(), "cannot execute uv") {
+	if code := runUV(nil, nil, io.Discard, &stderr, quiet); code != 126 || !strings.Contains(stderr.String(), "cannot execute uv") {
 		t.Fatalf("code %d: %s", code, &stderr)
+	}
+}
+
+func TestExitCode(t *testing.T) {
+	if code, err := exitCode(nil); code != 0 || err != nil {
+		t.Fatalf("success: %d %v", code, err)
+	}
+	startErr := fmt.Errorf("start: %w", exec.ErrNotFound)
+	if code, err := exitCode(startErr); code != 126 || !errors.Is(err, exec.ErrNotFound) {
+		t.Fatalf("start failure: %d %v", code, err)
+	}
+	fixtureUV(t)
+	t.Setenv("UVPIP_TEST_MODE", "exit")
+	path := os.Getenv("UVPIP_UV")
+	if code, err := exitCode(exec.Command(path).Run()); code != 23 || err != nil {
+		t.Fatalf("child exit: %d %v", code, err)
 	}
 }
 

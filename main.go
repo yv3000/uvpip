@@ -32,8 +32,11 @@ func runCLI(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}
 
 	// All other args: translate pip → uv and run
+	log := newLogger(stderr, os.Getenv("UVPIP_DEBUG"))
 	uvArgs := translateToUV(args)
-	return runUV(uvArgs, stdin, stdout, stderr)
+	// Log only the routed uv command and count; argument values may hold credentials.
+	log.Debug("translated command", "uv_command", uvArgs[0], "arg_count", len(uvArgs))
+	return runUV(uvArgs, stdin, stdout, stderr, log)
 }
 
 func printUsage(out io.Writer) {

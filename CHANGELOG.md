@@ -15,6 +15,18 @@ The source version constant remains `1.0.0`; identify builds by source commit.
   as well as `VIRTUAL_ENV` when deciding whether to default `UV_SYSTEM_PYTHON=1`.
 - Set the Go language minimum to 1.26.0 and pin verification to Go 1.26.8. Remove
   the empty `go.sum`; the runtime has no third-party Go dependencies.
+- Pin govulncheck and actionlint as Go `tool` directives, so `go.sum` now records
+  checksums for development tools only (never linked into the binary), CI runs
+  `go mod tidy -diff` and `go mod verify`, and Dependabot updates the tools.
+- Replace standalone Staticcheck with golangci-lint v2.14.0 (`.golangci.yml`:
+  standard linters plus gosec, errorlint, gocritic, misspell, and others).
+- Split CI into directly named steps: format, module checks, vet, build, test
+  with coverage (race on Linux/macOS), coverage gate, govulncheck, installer
+  tests, golangci-lint, actionlint, ShellCheck, PowerShell parsing, and Gitleaks.
+- Add opt-in `UVPIP_DEBUG=1` structured (`log/slog`) stderr diagnostics for uv
+  discovery, environment defaulting, and exit status. Argument values and
+  environment contents are never logged. Default output is unchanged.
+- Add `.env.example` and a README table documenting every supported variable.
 - Remove the legacy `v1` tree: 1,529 files and 313,277 lines.
 - Forward `-v` to uv, reserve `--version`/`-V` for wrapper version, and preserve
   uninstall arguments after `--`.

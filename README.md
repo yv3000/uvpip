@@ -20,9 +20,9 @@ uv, your packages, network, and environment; uvpip is not a complete pip emulato
   and a Python interpreter supported by that version of uv.
 - For source builds and project verification: Go **1.26.8** (module language
   minimum **1.26.0**). No third-party Go runtime dependencies are required.
-- Installers target Windows, macOS, and Linux on amd64 and arm64. Native
-  Linux/macOS verification is pending CI on the pushed revised source; Git Bash
-  tests are not native Linux/macOS execution.
+- Installers target Windows, macOS, and Linux on amd64 and arm64. CI runs the Go
+  test suite and offline installer tests natively on Ubuntu 24.04, macOS 14, and
+  Windows Server 2022; Git Bash tests are not native Linux/macOS execution.
 - Windows installation uses PowerShell. Windows installer tests explicitly use
   Windows PowerShell **5.1**. POSIX installation uses `sh` and standard utilities;
   downloading requires `curl` or `wget`.
@@ -31,6 +31,27 @@ uvpip itself does not install Python. The explicit installer can install uv if
 it is absent; the revised runtime never downloads or installs anything on its own.
 Package operations delegated to uv can, of course, access the network and modify
 the selected Python environment.
+
+## Build And Test From A Fresh Clone
+
+Only Git and Go 1.26 (verification pins 1.26.8) are needed; nothing else must be
+installed first.
+
+```sh
+git clone https://github.com/yv3000/uvpip.git
+cd uvpip
+go mod verify            # checks downloaded modules against go.sum hashes
+go build ./...           # writes the uvpip binary into the checkout (gitignored)
+go test ./...            # full unit + subprocess-fixture suite, offline
+```
+
+The same commands, plus `go vet`, a 90% coverage gate, `golangci-lint`,
+`govulncheck`, ShellCheck, and installer tests, run on every push and pull
+request in [CI](.github/workflows/ci.yml). Tests never touch your real profile,
+PATH, pip, or uv. `go.sum` exists only because development tools (`govulncheck`,
+`actionlint`) are pinned with Go `tool` directives in `go.mod`; they are not
+linked into the uvpip binary. See [CONTRIBUTING.md](CONTRIBUTING.md) for the
+full verifier.
 
 ## Install From Source
 
@@ -167,6 +188,26 @@ probes have a five-second timeout. This is an executable/PATH check, not proof
 that a parent shell function or alias is active; a working interactive function
 can coexist with a failed PATH-shim check. Inspect `Get-Command pip -All` in
 PowerShell or `type pip` in your interactive POSIX shell when investigating that.
+
+For a single command, set `UVPIP_DEBUG=1` to print structured `key=value`
+records to stderr showing which uv was resolved and how, whether
+`UV_SYSTEM_PYTHON=1` was defaulted, and uv's exit code and duration. Argument
+values and environment contents are never logged, so index credentials in
+URLs stay out of the output. With the variable unset, uv's stderr is untouched.
+
+### Environment Variables
+
+All variables are optional. [.env.example](.env.example) documents each one;
+it is a reference template, and uvpip never loads `.env` files.
+
+| Variable | Read by | Purpose |
+| --- | --- | --- |
+| `UVPIP_UV` | runtime | Absolute path to the uv executable (see Environment Selection). |
+| `UVPIP_DEBUG` | runtime | `1`/`true`/`yes`/`on` enables stderr diagnostics. |
+| `UV_SYSTEM_PYTHON` | uv | Passed through; defaulted to `1` outside venv/Conda. |
+| `UVPIP_BINARY` | installers | Local binary to install instead of downloading. |
+| `UVPIP_SHA256` | installers | Expected SHA-256 of the binary being installed. |
+| `UVPIP_NO_PROFILE` | POSIX installer/uninstaller | `1` skips the shell profile block. |
 
 ## Uninstall
 

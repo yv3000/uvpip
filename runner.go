@@ -18,7 +18,8 @@ func runUV(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		fmt.Fprintf(stderr, "[uvpip] %v; install uv: https://docs.astral.sh/uv/getting-started/installation/\n", err)
 		return 127
 	}
-	cmd := exec.Command(uvPath, args...)
+	// uvPath comes from trusted discovery above (absolute override or PATH without ErrDot).
+	cmd := exec.Command(uvPath, args...) //nolint:gosec // G204: executing the resolved uv binary is the program's purpose.
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = stdin, stdout, stderr
 	cmd.Env = buildEnv(os.Environ())
 	if err := cmd.Run(); err != nil {
@@ -60,7 +61,7 @@ func findUV() (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("inspect uvpip executable: %w", err)
 	}
-	uvInfo, err := os.Stat(path)
+	uvInfo, err := os.Stat(path) //nolint:gosec // G703: stat-only check of the operator-selected or PATH-resolved uv.
 	if err != nil {
 		return "", fmt.Errorf("inspect uv executable: %w", err)
 	}

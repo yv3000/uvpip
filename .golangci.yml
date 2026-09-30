@@ -1,0 +1,41 @@
+# golangci-lint v2 configuration. CI and scripts/verify.* run `golangci-lint run ./...`
+# with the version pinned in CONTRIBUTING.md. Keep exclusions narrow and justified inline.
+version: "2"
+
+run:
+  timeout: 5m
+  tests: true
+
+linters:
+  default: standard # errcheck, govet, ineffassign, staticcheck, unused
+  enable:
+    - bodyclose
+    - errorlint
+    - gocritic
+    - gosec
+    - misspell
+    - nolintlint
+    - unconvert
+    - usestdlibvars
+  settings:
+    errcheck:
+      # Writes to the user's terminal cannot be meaningfully retried or reported.
+      exclude-functions:
+        - fmt.Fprint
+        - fmt.Fprintf
+        - fmt.Fprintln
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+  exclusions:
+    rules:
+      # Test fixtures copy the test binary into t.TempDir(), mark stubs executable
+      # (0700), run them, and use a fake credential to prove it is never logged.
+      - path: _test\.go
+        linters:
+          - gosec
+        text: "G101|G204|G304|G306|G70[23]"
+
+formatters:
+  enable:
+    - gofmt

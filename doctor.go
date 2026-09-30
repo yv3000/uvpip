@@ -32,7 +32,8 @@ func runDoctor(out io.Writer) int {
 				}
 			} else {
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				output, runErr := exec.CommandContext(ctx, path, "--version").Output()
+				// path comes from findUV/exec.LookPath; probing its version is the check itself.
+				output, runErr := exec.CommandContext(ctx, path, "--version").Output() //nolint:gosec // G204: intentional probe of a resolved executable.
 				cancel()
 				err = runErr
 				if err == nil {
@@ -54,11 +55,11 @@ func runDoctor(out io.Writer) int {
 }
 
 func isUvpipShim(path string) bool {
-	file, err := os.Open(path)
+	file, err := os.Open(path) //nolint:gosec // G304: bounded read-only inspection of a PATH-resolved shim.
 	if err != nil {
 		return false
 	}
-	defer file.Close()
+	defer func() { _ = file.Close() }() // Read-only; a close error cannot change the result.
 	data, err := io.ReadAll(io.LimitReader(file, 4097))
 	if err != nil || len(data) > 4096 || strings.ContainsRune(string(data), 0) {
 		return false

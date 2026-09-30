@@ -27,6 +27,10 @@ try {
     $unformatted = & gofmt -l @goFiles
     if ($LASTEXITCODE -ne 0) { throw 'gofmt failed' }
     if ($unformatted) { throw "Run gofmt on: $($unformatted -join ', ')" }
+    & go mod tidy -diff
+    if ($LASTEXITCODE -ne 0) { throw 'go.mod/go.sum are not tidy' }
+    & go mod verify
+    if ($LASTEXITCODE -ne 0) { throw 'go mod verify failed' }
     & go vet ./...
     if ($LASTEXITCODE -ne 0) { throw 'go vet failed' }
     & go build -o (Join-Path $artifacts 'uvpip-build.exe') ./...
@@ -41,13 +45,13 @@ try {
     if (-not $total.Success) { throw 'Missing total statement coverage' }
     $percent = [double]::Parse($total.Groups[1].Value, [Globalization.CultureInfo]::InvariantCulture)
     if ($percent -lt 90) { throw "Statement coverage $percent% is below 90%" }
-    & staticcheck ./...
-    if ($LASTEXITCODE -ne 0) { throw 'staticcheck failed' }
-    & govulncheck ./...
+    & golangci-lint run ./...
+    if ($LASTEXITCODE -ne 0) { throw 'golangci-lint failed' }
+    & go tool govulncheck ./...
     if ($LASTEXITCODE -ne 0) { throw 'govulncheck failed' }
     & gitleaks dir --redact --no-banner .
     if ($LASTEXITCODE -ne 0) { throw 'Secret scan failed' }
-    & actionlint .github/workflows/ci.yml
+    & go tool actionlint .github/workflows/ci.yml
     if ($LASTEXITCODE -ne 0) { throw 'actionlint failed' }
     $shellFiles = @(Get-ChildItem -Path installer, uninstaller, scripts, bin -Filter '*.sh' -File | ForEach-Object { $_.FullName })
     & shellcheck @shellFiles

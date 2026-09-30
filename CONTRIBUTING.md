@@ -11,21 +11,29 @@ Verification is pinned to:
 
 - Go **1.26.8** (a supported release listed by [go.dev](https://go.dev/dl/), not
   a claim that it is the newest Go minor version).
-- Staticcheck: `honnef.co/go/tools/cmd/staticcheck@v0.8.1`.
-- govulncheck: `golang.org/x/vuln/cmd/govulncheck@v1.8.0` (requires Go 1.26).
-- actionlint: `github.com/rhysd/actionlint/cmd/actionlint@v1.7.7`.
-- Gitleaks: `github.com/zricethezav/gitleaks/v8@v8.30.1` (redacted source secret scan).
+- govulncheck `golang.org/x/vuln` v1.8.0 and actionlint `github.com/rhysd/actionlint`
+  v1.7.7, pinned as Go `tool` directives in `go.mod` with hashes in `go.sum`.
+  Run them as `go tool govulncheck ./...` and `go tool actionlint`; no separate
+  install step is needed, and Dependabot's `gomod` updates cover them.
+- golangci-lint: `github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0`
+  (runs staticcheck, govet, errcheck, gosec, and others per `.golangci.yml`).
+  Installed with `go install` rather than a `tool` directive because its ~250
+  transitive modules would bloat this module's dependency graph.
+- Gitleaks: `github.com/zricethezav/gitleaks/v8@v8.30.1` (redacted source secret
+  scan), installed the same way for the same reason.
 - [ShellCheck 0.11.0](https://github.com/koalaman/shellcheck/releases/tag/v0.11.0).
 - Windows PowerShell **5.1** for Windows installer tests; PowerShell 7 (`pwsh`)
   for syntax parsing on Linux/macOS. Linux race tests also require a C compiler.
 
-`staticcheck.conf` inherits upstream default checks; `.shellcheckrc` selects
-POSIX shell without globally suppressing warnings. The module language minimum
-is Go **1.26.0**; verification uses **1.26.8**. The runtime has no third-party Go
-dependencies, so there is no `go.sum`. `GOTOOLCHAIN=local` prevents an
-unexpected automatic compiler download. Change tool pins through review, not
-by substituting `@latest` in CI. Dependabot covers Go modules and Actions, not
-the versions embedded in `go install` commands or ShellCheck download hashes.
+`.golangci.yml` enables the standard linter set plus gosec, errorlint, gocritic,
+and a few others; every `//nolint` needs a specific linter and explanation.
+`.shellcheckrc` selects POSIX shell without globally suppressing warnings. The
+module language minimum is Go **1.26.0**; verification uses **1.26.8**. The
+uvpip binary has no third-party Go dependencies: every `go.sum` entry belongs to
+the pinned tools, which are never linked into the binary. `GOTOOLCHAIN=local`
+prevents an unexpected automatic compiler download. Change tool pins through
+review (`go get -tool <module>@<version>`, then `go mod tidy`), not `@latest`.
+Dependabot does not update the `go install` pins or ShellCheck download hashes.
 
 ## Windows Verification
 
@@ -41,12 +49,8 @@ $env:GOTOOLCHAIN = 'local'
 $goBin = Join-Path $env:LOCALAPPDATA 'go1.26.8\go\bin'
 if (-not (Test-Path -LiteralPath (Join-Path $goBin 'go.exe') -PathType Leaf)) { throw 'Install Go 1.26.8 under the managed LOCALAPPDATA first' }
 $env:PATH = "$goBin;$env:GOBIN;$env:PATH"
-go install honnef.co/go/tools/cmd/staticcheck@v0.8.1
-if ($LASTEXITCODE -ne 0) { throw 'Staticcheck installation failed' }
-go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
-if ($LASTEXITCODE -ne 0) { throw 'govulncheck installation failed' }
-go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
-if ($LASTEXITCODE -ne 0) { throw 'actionlint installation failed' }
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
+if ($LASTEXITCODE -ne 0) { throw 'golangci-lint installation failed' }
 go install github.com/zricethezav/gitleaks/v8@v8.30.1
 if ($LASTEXITCODE -ne 0) { throw 'Gitleaks installation failed' }
 powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/verify.ps1 -TestRoot $tests -CacheRoot $cache
@@ -123,12 +127,8 @@ if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve clone commit' }
 if ($CloneCommit -ne $SourceCommit) { throw 'Clone does not match the selected source commit' }
 Write-Host "Verifying local main commit: $CloneCommit"
 . .\scripts\env.ps1 -CacheRoot $CacheRoot
-go install honnef.co/go/tools/cmd/staticcheck@v0.8.1
-if ($LASTEXITCODE -ne 0) { throw 'Staticcheck installation failed' }
-go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
-if ($LASTEXITCODE -ne 0) { throw 'govulncheck installation failed' }
-go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
-if ($LASTEXITCODE -ne 0) { throw 'actionlint installation failed' }
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
+if ($LASTEXITCODE -ne 0) { throw 'golangci-lint installation failed' }
 go install github.com/zricethezav/gitleaks/v8@v8.30.1
 if ($LASTEXITCODE -ne 0) { throw 'Gitleaks installation failed' }
 powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/verify.ps1 -TestRoot $TestRoot -CacheRoot $CacheRoot
@@ -160,12 +160,10 @@ $CloneCommit = git rev-parse HEAD
 if ($LASTEXITCODE -ne 0) { throw 'Cannot resolve clone commit' }
 Write-Host "Verifying remote main commit: $CloneCommit"
 . .\scripts\env.ps1 -CacheRoot $CacheRoot
-go install honnef.co/go/tools/cmd/staticcheck@v0.8.1
-if ($LASTEXITCODE -ne 0) { throw 'Staticcheck installation failed' }
-go install golang.org/x/vuln/cmd/govulncheck@v1.8.0
-if ($LASTEXITCODE -ne 0) { throw 'govulncheck installation failed' }
-go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7
-if ($LASTEXITCODE -ne 0) { throw 'actionlint installation failed' }
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0
+if ($LASTEXITCODE -ne 0) { throw 'golangci-lint installation failed' }
+go install github.com/zricethezav/gitleaks/v8@v8.30.1
+if ($LASTEXITCODE -ne 0) { throw 'Gitleaks installation failed' }
 powershell.exe -NoLogo -NoProfile -NonInteractive -ExecutionPolicy Bypass -File scripts/verify.ps1 -TestRoot $TestRoot -CacheRoot $CacheRoot
 if ($LASTEXITCODE -ne 0) { throw 'Fresh-clone verification failed' }
 ```
@@ -189,9 +187,7 @@ export GOCACHE="$CACHE_ROOT/uvpip-dev/go-build" GOMODCACHE="$CACHE_ROOT/uvpip-de
 export GOTOOLCHAIN=local
 export PATH="$GOBIN:$PATH"
 mkdir -p "$HOME" "$TMPDIR" "$GOPATH" "$GOBIN" "$GOCACHE" "$GOMODCACHE"
-go install honnef.co/go/tools/cmd/staticcheck@v0.8.1 || exit 1
-go install golang.org/x/vuln/cmd/govulncheck@v1.8.0 || exit 1
-go install github.com/rhysd/actionlint/cmd/actionlint@v1.7.7 || exit 1
+go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@v2.14.0 || exit 1
 go install github.com/zricethezav/gitleaks/v8@v8.30.1 || exit 1
 sh scripts/verify.sh "$TEST_ROOT" "$CACHE_ROOT"
 ```
@@ -244,21 +240,32 @@ These focused commands do not replace the verifier or enforce its coverage gate.
 
 ## Checks And Scope
 
-The verifiers run a non-mutating `gofmt -l` check on the root Go package,
-`go vet ./...`, `go build -o <dedicated-output> ./...`,
-`go test -count=1 -coverprofile=<managed-temp>/coverage.out ./...`, and
-`go tool cover -func=<profile>`. The total statement coverage must be at least
-**90% on each host**; a missing report or failed command is an error. Add new
-package directories to the formatting check if the current single-package layout
-changes. Plain `go build ./...` is the standard build command but emits an ignored
-binary in this checkout; verification always uses `-o` to avoid overwriting it.
+CI (`.github/workflows/ci.yml`) runs each check as its own named step, so a
+failure points at one command. The `Test` job runs on all three operating
+systems: `gofmt -l .`, `go mod tidy -diff`, `go mod verify`, `go vet ./...`,
+`go build`, `go test -count=1 -covermode=atomic -coverprofile=coverage.out ./...`
+(with `-race` on Linux and macOS), `go tool cover -func=coverage.out`, a 90%
+total statement coverage gate, `go tool govulncheck ./...`, and the native
+offline installer suite. The `Lint and security scan` job runs
+`golangci-lint run ./...`, `go tool actionlint`, ShellCheck, PowerShell parsing,
+and `gitleaks dir --redact --no-banner .`.
 
-They also run `staticcheck ./...`, `govulncheck ./...`, `gitleaks dir --redact --no-banner .`,
-`actionlint .github/workflows/ci.yml`, ShellCheck on all current POSIX installer,
-uninstaller, shim, and developer scripts, PowerShell parsing, and the native
-offline installer suite. `govulncheck` may access the public vulnerability
-database, and tool installation uses Go's module proxy/checksum infrastructure.
-Installer tests themselves mock downloads and uv setup and do not require network.
+The local verifiers (`scripts/verify.ps1`, `scripts/verify.sh`) run the same
+commands, writing build and coverage output to a managed temp directory instead
+of the checkout. Total statement coverage must be at least **90% on each host**;
+a missing report or failed command is an error. To apply the CI coverage gate
+by hand after `go test ... -coverprofile=coverage.out ./...`:
+
+```sh
+go tool cover -func=coverage.out | awk '$1 == "total:" { sub("%", "", $3); ok = ($3 + 0 >= 90) } END { exit !ok }'
+```
+
+Add new package directories to the formatting check if the current
+single-package layout changes. Plain `go build ./...` emits an ignored binary in
+this checkout; verification always uses `-o` to avoid overwriting it.
+`govulncheck` may access the public vulnerability database, and tool
+installation uses Go's module proxy/checksum infrastructure. Installer tests
+themselves mock downloads and uv setup and do not require network.
 
 To run just installer checks after setting up the isolated environment:
 
@@ -278,8 +285,9 @@ Git Bash installer checks and cross-builds are not native Linux/macOS execution
 evidence. A passing scan reports only what its current database and rules detect.
 
 CI is configured for Ubuntu 24.04, Windows Server 2022, and macOS 14 runners. It
-has read-only repository permissions, disables checkout credential persistence and setup-go
-caching, pins Actions by full commit SHA, and does not publish or request secrets.
+has read-only repository permissions, disables checkout credential persistence,
+caches Go modules keyed on `go.sum`, pins Actions by full commit SHA, and does
+not publish or request secrets.
 PowerShell parsing is not a full PowerShell static analyzer. Mocked installer
 tests do not prove live downloads, every shell's startup rules, all architectures,
 or every uv/package combination. Coverage is only one gate, not a compatibility

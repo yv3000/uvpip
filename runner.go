@@ -64,8 +64,8 @@ func findUV() (string, error) {
 	path := os.Getenv("UVPIP_UV")
 	var err error
 	if path != "" {
-		if !filepath.IsAbs(path) {
-			return "", fmt.Errorf("UVPIP_UV must be an absolute executable path")
+		if err = validateUVOverride(path); err != nil {
+			return "", err
 		}
 		path, err = exec.LookPath(path)
 		if err != nil {

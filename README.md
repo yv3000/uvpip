@@ -150,9 +150,10 @@ After shell integration, substitute `pip` or `pip3` for `uvpip`.
 
 The child process receives argument boundaries directly, without a runtime shell,
 and inherits stdin, stdout, and stderr without output rewriting. A normal uv exit
-code is returned unchanged. Failure to locate uv returns **127**; failure to start
-the resolved executable returns **126**. Signal termination has no portable child
-exit code and returns **1**.
+code is returned unchanged. A blank pip command (for example `pip ""`) is
+rejected with **2** before uv starts. Failure to locate uv returns **127**;
+failure to start the resolved executable returns **126**. Signal termination has
+no portable child exit code and returns **1**.
 
 ### Environment Selection
 
@@ -168,7 +169,9 @@ searches PATH, then known per-user/platform installation locations. It refuses
 Go's `ErrDot` current-directory lookup and excludes relative fallback candidates.
 It rejects uv resolving to its own executable using `os.SameFile`, including
 hardlinks or symlinks to that same file, but not separate identical copies.
-An invalid explicit override fails rather than falling back to a different uv.
+An invalid explicit override fails rather than falling back to a different uv;
+blank values and values with leading or trailing whitespace (usually a quoting
+mistake) are reported as such.
 Only point the override and PATH at trusted executables.
 
 Shell functions can keep intercepting `pip` after virtual environment activation

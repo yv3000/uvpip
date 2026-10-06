@@ -123,6 +123,14 @@ printf 'keep\n# --- uvpip start ---\nowned\n# --- uvpip end ---\n# --- uvpip sta
 printf 'keep\n' > "$WORK/expected"
 uninstall
 cmp -s "$HOME/.bashrc" "$WORK/expected" || fail 'exact multi-block removal'
+# A profile re-saved with CRLF endings (e.g. by a Windows editor) still owns its block.
+printf 'keep\r\n# --- uvpip start ---\r\nowned\r\n# --- uvpip end ---\r\ntail\r\n' > "$HOME/.bashrc"
+cp "$HOME/.bashrc" "$WORK/original"
+install
+cmp -s "$HOME/.bashrc" "$WORK/original" || fail 'installer duplicated a CRLF block'
+printf 'keep\r\ntail\r\n' > "$WORK/expected"
+uninstall
+cmp -s "$HOME/.bashrc" "$WORK/expected" || fail 'CRLF block removal'
 printf '# user config\n' > "$HOME/.bashrc"
 cp "$HOME/.bashrc" "$WORK/original"
 

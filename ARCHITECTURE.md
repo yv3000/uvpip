@@ -35,7 +35,8 @@ pip / pip3 shim or shell function
 
 ## Tests
 
-Each `*.go` file has a `*_test.go` sibling. `runner_test.go`'s `TestMain` turns
+Each `*.go` file has a `*_test.go` sibling, and `integration_test.go` exercises
+the complete install-doctor-uninstall lifecycle. `runner_test.go`'s `TestMain` turns
 the test binary into an offline fake uv (`fixtureUV`), so subprocess behavior is
 tested without uv or network. Installer suites in `scripts/` mock `curl`, `uname`,
 and uv. CI enforces a 90% statement-coverage floor; see [CONTRIBUTING.md](CONTRIBUTING.md).

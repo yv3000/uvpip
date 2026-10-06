@@ -7,6 +7,8 @@ The source version constant remains `1.0.0`; identify builds by source commit.
 
 - Reject a blank pip command with exit status 2 before uv starts, and report
   blank or whitespace-padded `UVPIP_UV` values precisely (`validate.go`).
+- Add offline Go integration test (`integration_test.go`) exercising the full
+  install, doctor diagnostics, CLI translation, and uninstall flow.
 - Remove runtime uv downloads and implicit recovery; missing uv returns 127,
   launch failures return 126, and normal child exit codes pass through.
 - Support an absolute `UVPIP_UV` override, reject current-directory `ErrDot`

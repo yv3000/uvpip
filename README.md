@@ -208,6 +208,7 @@ it is a reference template, and uvpip never loads `.env` files.
 | `UVPIP_UV` | runtime | Absolute path to the uv executable (see Environment Selection). |
 | `UVPIP_DEBUG` | runtime | `1`/`true`/`yes`/`on` enables stderr diagnostics. |
 | `UV_SYSTEM_PYTHON` | uv | Passed through; defaulted to `1` outside venv/Conda. |
+| `HOME`, `USERPROFILE`, `APPDATA`, `LOCALAPPDATA` | runtime | OS-provided; locate fallback uv install directories. |
 | `UVPIP_BINARY` | installers | Local binary to install instead of downloading. |
 | `UVPIP_SHA256` | installers | Expected SHA-256 of the binary being installed. |
 | `UVPIP_NO_PROFILE` | POSIX installer/uninstaller | `1` skips the shell profile block. |

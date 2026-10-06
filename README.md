@@ -234,7 +234,8 @@ them manually and retry. Windows accepts `-NoProfile`/`-NoPath`; POSIX accepts
 
 ## Development And Security
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for required fresh-clone verification,
+See [ARCHITECTURE.md](ARCHITECTURE.md) for the request flow and the role of
+each file, and [CONTRIBUTING.md](CONTRIBUTING.md) for required fresh-clone verification,
 formatting/tests, pinned tools, the coverage gate, and the manual release checklist.
 CI does not publish binaries or use release secrets.
 

@@ -8,7 +8,7 @@ RELEASE_BASE="https://github.com/yv3000/uvpip/releases/latest/download"
 err() { printf 'uvpip: %s\n' "$*" >&2; exit 1; }
 download() {
     if command -v curl >/dev/null 2>&1; then
-        curl -fLSs "$1" -o "$2" || return 1
+        curl --proto '=https' --tlsv1.2 -fLSs "$1" -o "$2" || return 1
     elif command -v wget >/dev/null 2>&1; then
         wget -q "$1" -O "$2" || return 1
     else

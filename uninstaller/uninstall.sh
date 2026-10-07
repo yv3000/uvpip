@@ -14,7 +14,7 @@ remove_from_config() {
         $0 == "# --- uvpip start ---" { if (inside) exit 1; inside=1 }
         $0 == "# --- uvpip end ---" { if (!inside) exit 1; inside=0 }
         END { if (inside) exit 1 }' "$config" || {
-            printf 'uvpip: Unbalanced markers in %s; file left unchanged. Repair manually and retry.\n' "$config" >&2
+            printf 'uvpip: Unbalanced uvpip markers in %s; file left unchanged. Repair manually and retry.\n' "$config" >&2
             exit 1
         }
     # read/printf retain CRLF and a missing final newline outside the block.

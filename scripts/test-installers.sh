@@ -114,8 +114,10 @@ for content in '# --- uvpip start ---' '# --- uvpip end ---' \
     printf '%s\nkeep this tail' "$content" > "$HOME/.bashrc"
     cp "$HOME/.bashrc" "$WORK/original"
     if sh "$UNINSTALL" > "$WORK/error.log" 2>&1; then fail 'accepted malformed markers'; fi
+    grep 'Unbalanced uvpip markers' "$WORK/error.log" >/dev/null || fail 'missing malformed markers error in uninstall'
     cmp -s "$HOME/.bashrc" "$WORK/original" || fail 'malformed profile modified'
     if sh "$INSTALL" > "$WORK/error.log" 2>&1; then fail 'installer accepted malformed markers'; fi
+    grep 'Unbalanced uvpip markers' "$WORK/error.log" >/dev/null || fail 'missing malformed markers error in install'
     cmp -s "$HOME/.bashrc" "$WORK/original" || fail 'installer changed malformed profile'
     UVPIP_NO_PROFILE=1 sh "$UNINSTALL" > "$WORK/uninstall.log" 2>&1
 done
@@ -141,6 +143,7 @@ if sh "$INSTALL" > "$WORK/error.log" 2>&1; then fail 'download failure succeeded
 no_stage
 export UVPIP_BINARY="$WORK/fixture" UVPIP_SHA256=bad
 if sh "$INSTALL" > "$WORK/error.log" 2>&1; then fail 'checksum mismatch succeeded'; fi
+grep 'SHA256 mismatch' "$WORK/error.log" >/dev/null || fail 'missing SHA256 mismatch error string'
 unset UVPIP_SHA256
 printf '#!/bin/sh\nexit 9\n' > "$WORK/bad"
 export UVPIP_BINARY="$WORK/bad"

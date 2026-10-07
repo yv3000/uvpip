@@ -1,21 +1,45 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"io"
 	"log/slog"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"runtime"
 	"strings"
 	"time"
 )
 
+const (
+	exitOK            = 0
+	exitGeneral       = 1
+	exitUsage         = 2
+	exitCannotExecute = 126
+	exitNotFound      = 127
+)
+
+var (
+	// ErrUVNotFound indicates uv could not be located in PATH or candidate locations.
+	ErrUVNotFound = errors.New("uv executable not found")
+	// ErrRecursiveExecution prevents uvpip from calling itself in an infinite loop.
+	ErrRecursiveExecution = errors.New("uv resolves to uvpip itself; refusing recursive execution")
+)
+
 // runUV never invokes a shell or downloads code. Streams pass through unchanged.
 // log receives opt-in diagnostics only; it never sees argument or env values.
 func runUV(args []string, stdin io.Reader, stdout, stderr io.Writer, log *slog.Logger) int {
+	ctx, cancel := signal.NotifyContext(context.Background(), os.Interrupt)
+	defer cancel()
+	return runUVContext(ctx, args, stdin, stdout, stderr, log)
+}
+
+// runUVContext executes uv with the given context for clean cancellation on interrupts.
+func runUVContext(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, log *slog.Logger) int {
 	source := "search"
 	if os.Getenv("UVPIP_UV") != "" {
 		source = "UVPIP_UV"
@@ -24,14 +48,14 @@ func runUV(args []string, stdin io.Reader, stdout, stderr io.Writer, log *slog.L
 	if err != nil {
 		log.Debug("uv discovery failed", "source", source, "error", err)
 		fmt.Fprintf(stderr, "[uvpip] %v; install uv: https://docs.astral.sh/uv/getting-started/installation/\n", err)
-		return 127
+		return exitNotFound
 	}
 	log.Debug("resolved uv", "path", uvPath, "source", source)
 	env := os.Environ()
 	childEnv := buildEnv(env)
 	log.Debug("prepared environment", "default_uv_system_python", len(childEnv) > len(env))
 	// uvPath comes from trusted discovery above (absolute override or PATH without ErrDot).
-	cmd := exec.Command(uvPath, args...) //nolint:gosec // G204: executing the resolved uv binary is the program's purpose.
+	cmd := exec.CommandContext(ctx, uvPath, args...) //nolint:gosec // G204: executing the resolved uv binary is the program's purpose.
 	cmd.Stdin, cmd.Stdout, cmd.Stderr = stdin, stdout, stderr
 	cmd.Env = childEnv
 	start := time.Now()
@@ -48,16 +72,16 @@ func runUV(args []string, stdin io.Reader, stdout, stderr io.Writer, log *slog.L
 // error when the child never ran.
 func exitCode(err error) (int, error) {
 	if err == nil {
-		return 0, nil
+		return exitOK, nil
 	}
 	var exitErr *exec.ExitError
 	if errors.As(err, &exitErr) {
 		if code := exitErr.ExitCode(); code >= 0 {
 			return code, nil
 		}
-		return 1, nil
+		return exitGeneral, nil
 	}
-	return 126, err
+	return exitCannotExecute, err
 }
 
 func findUV() (string, error) {
@@ -90,7 +114,7 @@ func findUV() (string, error) {
 		return "", fmt.Errorf("inspect uv executable: %w", err)
 	}
 	if os.SameFile(selfInfo, uvInfo) {
-		return "", fmt.Errorf("uv resolves to uvpip itself; refusing recursive execution")
+		return "", ErrRecursiveExecution
 	}
 	return path, nil
 }
@@ -106,7 +130,7 @@ func lookupUV(lookPath func(string) (string, error), candidates []string) (strin
 			return path, nil
 		}
 	}
-	return "", fmt.Errorf("uv executable not found")
+	return "", ErrUVNotFound
 }
 
 func uvCandidatePaths() []string {

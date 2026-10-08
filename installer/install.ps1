@@ -53,7 +53,6 @@ function pip3 {
     [IO.File]::WriteAllBytes($PROFILE, [byte[]]($preamble + $encoding.GetBytes($text)))
 }
 
-[Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 $stage = Join-Path ([IO.Path]::GetTempPath()) ('uvpip-install-' + [guid]::NewGuid().ToString('N'))
 [IO.Directory]::CreateDirectory($stage) | Out-Null
 try {

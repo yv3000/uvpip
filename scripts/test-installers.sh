@@ -33,11 +33,8 @@ case "$1" in -s) printf '%s\n' "${MOCK_OS:-Linux}" ;; -m) echo x86_64 ;; *) exit
 MOCK
 cat > "$WORK/mock/curl" <<'MOCK'
 #!/bin/sh
-out=''
-while [ $# -gt 0 ]; do
-    if [ "$1" = -o ]; then out="$2"; shift 2; else shift; fi
-done
-printf 'partial\n' > "$out"
+# Production calls: curl -fLSs URL -o OUTPUT. Never access the network.
+printf 'partial\n' > "$4"
 exit 22
 MOCK
 cp "$WORK/mock/curl" "$WORK/mock/wget"
@@ -166,11 +163,7 @@ no_stage
 # Successful checked download and optional checksum use the same staging path.
 cat > "$WORK/mock/curl" <<'MOCK'
 #!/bin/sh
-out=''
-while [ $# -gt 0 ]; do
-    if [ "$1" = -o ]; then out="$2"; shift 2; else shift; fi
-done
-cp "$MOCK_BINARY" "$out"
+cp "$MOCK_BINARY" "$4"
 MOCK
 export MOCK_BINARY="$WORK/fixture"
 unset UVPIP_BINARY

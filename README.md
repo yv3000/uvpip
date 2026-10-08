@@ -241,12 +241,6 @@ them manually and retry. Windows accepts `-NoProfile`/`-NoPath`; POSIX accepts
 See [ARCHITECTURE.md](ARCHITECTURE.md) for the request flow and the role of
 each file, and [CONTRIBUTING.md](CONTRIBUTING.md) for required fresh-clone verification,
 formatting/tests, pinned tools, the coverage gate, and the manual release checklist.
-A multi-stage [Dockerfile](Dockerfile) is provided for isolated, reproducible container builds:
-
-```sh
-docker build -t uvpip .
-```
-
 CI does not publish binaries or use release secrets.
 
 See [SECURITY.md](SECURITY.md) for the trust model and reporting guidance, and

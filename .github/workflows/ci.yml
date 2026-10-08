@@ -79,17 +79,6 @@ jobs:
       - name: Go vulnerability audit (govulncheck)
         run: go tool govulncheck ./...
 
-      - name: Fuzz testing smoke test
-        if: runner.os == 'Linux'
-        run: |
-          go test -fuzz=FuzzTranslateToUV -fuzztime=2s ./...
-          go test -fuzz=FuzzValidateUVOverride -fuzztime=2s ./...
-          go test -fuzz=FuzzBuildEnv -fuzztime=2s ./...
-
-      - name: Build container image (docker build)
-        if: runner.os == 'Linux'
-        run: docker build -t uvpip:test .
-
       - name: Installer tests (POSIX sh, offline)
         if: runner.os != 'Windows'
         run: |

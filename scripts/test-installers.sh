@@ -33,8 +33,11 @@ case "$1" in -s) printf '%s\n' "${MOCK_OS:-Linux}" ;; -m) echo x86_64 ;; *) exit
 MOCK
 cat > "$WORK/mock/curl" <<'MOCK'
 #!/bin/sh
-# Production calls: curl -fLSs URL -o OUTPUT. Never access the network.
-printf 'partial\n' > "$4"
+out=''
+while [ $# -gt 0 ]; do
+    if [ "$1" = -o ]; then out="$2"; shift 2; else shift; fi
+done
+printf 'partial\n' > "$out"
 exit 22
 MOCK
 cp "$WORK/mock/curl" "$WORK/mock/wget"
@@ -114,8 +117,10 @@ for content in '# --- uvpip start ---' '# --- uvpip end ---' \
     printf '%s\nkeep this tail' "$content" > "$HOME/.bashrc"
     cp "$HOME/.bashrc" "$WORK/original"
     if sh "$UNINSTALL" > "$WORK/error.log" 2>&1; then fail 'accepted malformed markers'; fi
+    grep 'Unbalanced uvpip markers' "$WORK/error.log" >/dev/null || fail 'missing malformed markers error in uninstall'
     cmp -s "$HOME/.bashrc" "$WORK/original" || fail 'malformed profile modified'
     if sh "$INSTALL" > "$WORK/error.log" 2>&1; then fail 'installer accepted malformed markers'; fi
+    grep 'Unbalanced uvpip markers' "$WORK/error.log" >/dev/null || fail 'missing malformed markers error in install'
     cmp -s "$HOME/.bashrc" "$WORK/original" || fail 'installer changed malformed profile'
     UVPIP_NO_PROFILE=1 sh "$UNINSTALL" > "$WORK/uninstall.log" 2>&1
 done
@@ -141,6 +146,7 @@ if sh "$INSTALL" > "$WORK/error.log" 2>&1; then fail 'download failure succeeded
 no_stage
 export UVPIP_BINARY="$WORK/fixture" UVPIP_SHA256=bad
 if sh "$INSTALL" > "$WORK/error.log" 2>&1; then fail 'checksum mismatch succeeded'; fi
+grep 'SHA256 mismatch' "$WORK/error.log" >/dev/null || fail 'missing SHA256 mismatch error string'
 unset UVPIP_SHA256
 printf '#!/bin/sh\nexit 9\n' > "$WORK/bad"
 export UVPIP_BINARY="$WORK/bad"
@@ -160,7 +166,11 @@ no_stage
 # Successful checked download and optional checksum use the same staging path.
 cat > "$WORK/mock/curl" <<'MOCK'
 #!/bin/sh
-cp "$MOCK_BINARY" "$4"
+out=''
+while [ $# -gt 0 ]; do
+    if [ "$1" = -o ]; then out="$2"; shift 2; else shift; fi
+done
+cp "$MOCK_BINARY" "$out"
 MOCK
 export MOCK_BINARY="$WORK/fixture"
 unset UVPIP_BINARY

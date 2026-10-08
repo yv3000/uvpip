@@ -55,7 +55,7 @@ jobs:
       - name: Verify module checksums (go mod verify)
         run: go mod verify
 
-      - name: Vet (go vet)
+      - name: Typecheck and vet (go vet)
         run: go vet ./...
 
       - name: Build (go build)
@@ -71,10 +71,20 @@ jobs:
         run: |
           total=$(go tool cover -func=coverage.out | awk '$1 == "total:" { sub("%", "", $3); print $3 }')
           echo "Total statement coverage: ${total}%"
+          if [ -n "$GITHUB_STEP_SUMMARY" ]; then
+            printf '### Coverage Summary\n- Total Statement Coverage: **%s%%**\n' "$total" >> "$GITHUB_STEP_SUMMARY"
+          fi
           awk -v total="$total" 'BEGIN { if (total == "" || total + 0 < 90) { print "Coverage below 90%"; exit 1 } }'
 
       - name: Go vulnerability audit (govulncheck)
         run: go tool govulncheck ./...
+
+      - name: Fuzz testing smoke test
+        if: runner.os == 'Linux'
+        run: |
+          go test -fuzz=FuzzTranslateToUV -fuzztime=2s ./...
+          go test -fuzz=FuzzValidateUVOverride -fuzztime=2s ./...
+          go test -fuzz=FuzzBuildEnv -fuzztime=2s ./...
 
       - name: Installer tests (POSIX sh, offline)
         if: runner.os != 'Windows'
@@ -93,7 +103,7 @@ jobs:
           if ($LASTEXITCODE -ne 0) { throw 'Windows installer tests failed' }
 
   lint:
-    name: Lint and security scan
+    name: Lint
     runs-on: ubuntu-24.04
     timeout-minutes: 20
     steps:

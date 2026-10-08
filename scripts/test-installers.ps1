@@ -27,10 +27,14 @@ $userPathBefore = [Environment]::GetEnvironmentVariable('PATH', 'User')
 $machinePathBefore = [Environment]::GetEnvironmentVariable('PATH', 'Machine')
 function Assert($Condition, [string]$Message) { if (-not $Condition) { throw "FAIL: $Message" } }
 function Bytes([string]$Path) { [Convert]::ToBase64String([IO.File]::ReadAllBytes($Path)) }
-function Expect-Failure([scriptblock]$Action) {
+function Expect-Failure([scriptblock]$Action, [string]$Pattern = '') {
     $failed = $false
-    try { & $Action 6>$null } catch { $failed = $true }
+    $msg = ''
+    try { & $Action 6>$null } catch { $failed = $true; $msg = $_.Exception.Message }
     Assert $failed 'expected terminating failure'
+    if ($Pattern -ne '') {
+        Assert ($msg -like "*$Pattern*") "expected error matching '$Pattern', got: $msg"
+    }
 }
 function Assert-NoStage {
     Assert (@(Get-ChildItem -LiteralPath $cache -Directory -Filter 'uvpip-install-*').Count -eq 0) 'staging leaked'
@@ -116,9 +120,9 @@ public static class InstallerFixture {
     foreach ($bad in @('# --- uvpip start ---', '# --- uvpip end ---', "# --- uvpip start ---`n# --- uvpip start ---`n# --- uvpip end ---")) {
         [IO.File]::WriteAllText($PROFILE, $bad + "`nkeep tail")
         $before = Bytes $PROFILE
-        Expect-Failure { & $uninstaller -NoPath }
+        Expect-Failure { & $uninstaller -NoPath } 'Unbalanced uvpip markers'
         Assert ((Bytes $PROFILE) -eq $before) 'malformed profile changed'
-        Expect-Failure { & $installer -BinaryPath $fixture -NoPath }
+        Expect-Failure { & $installer -BinaryPath $fixture -NoPath } 'Unbalanced uvpip markers'
         Assert ((Bytes $PROFILE) -eq $before) 'installer changed malformed profile'
         & $uninstaller -NoProfile -NoPath 6>$null
     }
@@ -129,7 +133,7 @@ public static class InstallerFixture {
     [IO.File]::WriteAllText($PROFILE, '# keep unchanged')
     $before = Bytes $PROFILE
     Expect-Failure { & $installer -BinaryPath '' -SHA256 '' -NoPath }
-    Expect-Failure { & $installer -BinaryPath $fixture -SHA256 'bad' -NoPath }
+    Expect-Failure { & $installer -BinaryPath $fixture -SHA256 'bad' -NoPath } 'SHA256 mismatch'
     $badBinary = Join-Path $work 'bad.exe'
     [IO.File]::WriteAllText($badBinary, 'not executable')
     Expect-Failure { & $installer -BinaryPath $badBinary -NoPath }

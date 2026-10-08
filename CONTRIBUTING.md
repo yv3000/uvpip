@@ -5,6 +5,20 @@ Do not add vendored environments, caches, secrets, generated binaries, or covera
 profiles to commits. Tests must not modify your real profile, registry PATH, pip,
 or uv installation. Use the offline installer suites rather than a live install.
 
+## Pull Request Checklist
+
+Before opening a pull request, ensure:
+
+- [ ] **Small and focused**: Changes address a single concern with minimal code changes.
+- [ ] **Standard library first**: Adhere to YAGNI principles; zero runtime dependencies.
+- [ ] **Tests included**: Every bug fix or new behavior includes automated regression tests.
+- [ ] **Coverage maintained**: Total statement coverage remains >= 90% (`go test -coverprofile=...`).
+- [ ] **Format and lint**: `gofmt -l .` reports no unformatted files and `golangci-lint run ./...` reports 0 issues.
+- [ ] **Tidy modules**: `go mod tidy -diff` and `go mod verify` pass cleanly.
+- [ ] **Shell scripts checked**: POSIX scripts pass `shellcheck` and PowerShell scripts pass `scripts/check-powershell.ps1`.
+- [ ] **Installer suites pass**: Offline installer tests pass (`scripts/test-installers.sh` and `scripts/test-installers.ps1`).
+- [ ] **Documentation updated**: README, ARCHITECTURE.md, or docstrings reflect the changes where applicable.
+
 ## Toolchain
 
 Verification is pinned to:

@@ -7,10 +7,6 @@ per-user `pip` and `pip3` shims and shell functions let you keep familiar comman
 without replacing Python's pip installation. Speed and compatibility depend on
 uv, your packages, network, and environment; uvpip is not a complete pip emulator.
 
-**Project type:** standalone command-line tool and per-user installer. It is not
-a backend service: no network listeners, no daemon, no persistent state, and no
-database. Each invocation runs uv once and exits with uv's status.
-
 > **Source versus releases:** This README describes the revised, unreleased
 > source. The published [v1.0.0 release](https://github.com/yv3000/uvpip/releases/tag/v1.0.0)
 > predates these changes. Running a revised installer without a local binary

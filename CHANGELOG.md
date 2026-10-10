@@ -5,6 +5,14 @@
 These changes describe revised source, not the downloadable v1.0.0 binaries.
 The source version constant remains `1.0.0`; identify builds by source commit.
 
+- Add centralized CLI boundary validation schema (`ValidateInputs`, `CLIInputs`)
+  coordinating command arguments and path overrides with table-driven assertions (`validate.go`).
+- Add structured Info-level failure audit trail logging in runner for binary discovery
+  and process execution failures outside debug mode (`runner.go`, `logging.go`).
+- Add granular shell installer test coverage for missing download tools and existing binary
+  reuse branches (`scripts/test-installers.sh`).
+- Document external contribution channels, commit pairing rules, and PR review
+  policy in `CONTRIBUTING.md`.
 - Reject a blank pip command with exit status 2 before uv starts, and report
   blank or whitespace-padded `UVPIP_UV` values precisely (`validate.go`).
 - Add offline Go integration test (`integration_test.go`) exercising the full

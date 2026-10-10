@@ -83,3 +83,37 @@ func TestRunUVRejectsBlankOverride(t *testing.T) {
 		t.Fatalf("code %d: %s", code, &stderr)
 	}
 }
+
+func TestValidateInputs(t *testing.T) {
+	abs, err := filepath.Abs("uv")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, tt := range []struct {
+		name    string
+		inputs  CLIInputs
+		wantErr string
+	}{
+		{"valid args without override", CLIInputs{Args: []string{"install", "pkg"}}, ""},
+		{"valid args with valid override", CLIInputs{Args: []string{"list"}, UVOverride: abs}, ""},
+		{"empty args", CLIInputs{Args: nil}, "pip command is empty"},
+		{"blank command", CLIInputs{Args: []string{"  "}}, "pip command is empty"},
+		{"blank UVPIP_UV", CLIInputs{Args: []string{"list"}, UVOverride: "  "}, "blank"},
+		{"whitespace-padded UVPIP_UV", CLIInputs{Args: []string{"list"}, UVOverride: abs + " "}, "whitespace"},
+		{"malformed relative UVPIP_UV", CLIInputs{Args: []string{"list"}, UVOverride: "uv"}, "absolute"},
+		{"valid override only", CLIInputs{UVOverride: abs}, ""},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			err := ValidateInputs(tt.inputs)
+			if tt.wantErr == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			if err == nil || !strings.Contains(err.Error(), tt.wantErr) {
+				t.Fatalf("err = %v, want mention of %q", err, tt.wantErr)
+			}
+		})
+	}
+}

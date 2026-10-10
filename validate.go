@@ -10,6 +10,30 @@ import (
 // errUsage marks input rejected before uv starts; runCLI maps it to exit status 2.
 var errUsage = errors.New("usage error")
 
+// CLIInputs specifies all user-supplied inputs evaluated at CLI boundaries:
+// command arguments and environment configuration overrides.
+type CLIInputs struct {
+	Args       []string
+	UVOverride string
+}
+
+// ValidateInputs runs boundary validation on all CLI entry point inputs.
+// It returns an error wrapping errUsage if arguments are invalid, or an error
+// describing invalid environment configuration overrides.
+func ValidateInputs(inputs CLIInputs) error {
+	if len(inputs.Args) > 0 || inputs.UVOverride == "" {
+		if err := validateArgs(inputs.Args); err != nil {
+			return err
+		}
+	}
+	if inputs.UVOverride != "" {
+		if err := validateUVOverride(inputs.UVOverride); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 // validateArgs rejects a blank pip command, which uv would only report as an
 // unrecognized empty subcommand. Values are never echoed: arguments can embed
 // index credentials.

@@ -19,6 +19,22 @@ Before opening a pull request, ensure:
 - [ ] **Installer suites pass**: Offline installer tests pass (`scripts/test-installers.sh` and `scripts/test-installers.ps1`).
 - [ ] **Documentation updated**: README, ARCHITECTURE.md, or docstrings reflect the changes where applicable.
 
+## External Contributions and Review Process
+
+We welcome external contributions, bug reports, and improvements from the community via GitHub Pull Requests.
+
+To maintain repository quality, security hygiene, and predictable development cadence, all pull requests undergo structured review against the following criteria:
+
+1. **Focused Commit Pairing**: Land changes as small, separately reviewable commits. Every commit introducing or modifying behavior must pair the source code change with its corresponding test file update (e.g., `validate.go` + `validate_test.go` or `runner.go` + `runner_test.go`). Avoid bulk commits that mix formatting, refactoring, and features.
+2. **Standard Library First**: Adhere to YAGNI and minimalist principles. `uvpip` carries zero third-party Go runtime dependencies. Do not introduce runtime dependencies or speculative abstractions.
+3. **Automated CI Gates**: Every pull request must pass the full multi-platform matrix in GitHub Actions:
+   - Ubuntu 24.04, macOS 14, and Windows Server 2022.
+   - Zero formatting (`gofmt`), typecheck (`go vet`), and lint (`golangci-lint`) issues.
+   - Pinned vulnerability audit (`govulncheck`) and secret scan (`gitleaks`).
+   - Strict test coverage gate enforcing >= 90% statement coverage across all operating systems.
+4. **Offline Installer Verification**: Changes affecting shell or PowerShell installers must pass offline test suites (`scripts/test-installers.sh` and `scripts/test-installers.ps1`) without touching real system environments.
+5. **Review Turnaround**: Maintainers review open PRs for functional correctness, security impact, and test coverage before merging directly to `main`.
+
 ## Toolchain
 
 Verification is pinned to:

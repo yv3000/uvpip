@@ -163,6 +163,19 @@ cmp -s "$HOME/.bashrc" "$WORK/original" || fail 'failed install changed profile'
 [ "$(cat "$HOME/.uvpip/keep.txt")" = keep ] || fail 'failure deleted unrelated file'
 no_stage
 
+# Missing downloader (neither curl nor wget available) fails with exit code 1.
+mkdir -p "$WORK/no-downloader"
+for tool in uname mktemp rm cp chmod sh; do
+    ln -s "$(command -v "$tool")" "$WORK/no-downloader/$tool"
+done
+unset UVPIP_BINARY
+status=0
+PATH="$WORK/no-downloader" sh "$INSTALL" > "$WORK/error.log" 2>&1 || status=$?
+[ "$status" -eq 1 ] || fail "missing downloader exit code $status (expected 1)"
+grep 'curl or wget is required to download files' "$WORK/error.log" >/dev/null || fail 'missing downloader error string'
+export UVPIP_BINARY="$WORK/fixture"
+no_stage
+
 # Successful checked download and optional checksum use the same staging path.
 cat > "$WORK/mock/curl" <<'MOCK'
 #!/bin/sh
@@ -193,6 +206,15 @@ uninstall
 unset MOCK_OS SHELL
 install
 uninstall
+
+# Existing binary reuse skips download/copy, validates binary, and succeeds.
+mkdir -p "$HOME/.uvpip/bin"
+cp "$WORK/fixture" "$HOME/.uvpip/bin/uvpip"
+unset UVPIP_BINARY
+install
+[ -x "$HOME/.uvpip/bin/uvpip" ] || fail 'existing binary missing'
+uninstall
+export UVPIP_BINARY="$WORK/fixture"
 
 # Isolated opt-out and repository shims use the same relative executable contract.
 export UVPIP_NO_PROFILE=1

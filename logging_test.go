@@ -73,3 +73,17 @@ func TestCLIDebugDiagnostics(t *testing.T) {
 		t.Fatalf("discovery failure not logged: %d %s", code, &stderr)
 	}
 }
+
+func TestFailureLoggingWithoutDebug(t *testing.T) {
+	t.Setenv("UVPIP_DEBUG", "")
+	t.Setenv("UVPIP_UV", filepath.Join(t.TempDir(), "missing"))
+	var stderr bytes.Buffer
+	code := runCLI([]string{"list"}, nil, io.Discard, &stderr)
+	if code != 127 {
+		t.Fatalf("exit code %d, want 127", code)
+	}
+	out := stderr.String()
+	if !strings.Contains(out, "level=INFO") || !strings.Contains(out, `msg="uv discovery failed"`) {
+		t.Fatalf("discovery failure not logged at info level without UVPIP_DEBUG: %d %s", code, &stderr)
+	}
+}

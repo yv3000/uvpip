@@ -15,13 +15,16 @@ func debugEnabled(value string) bool {
 	return false
 }
 
-// newLogger returns a structured (key=value) debug logger writing to w when
-// UVPIP_DEBUG is enabled. Otherwise it discards records, so uv's own stderr
-// stream reaches the user unchanged. Callers must not log argument values or
-// environment contents: pip arguments can embed index credentials.
+// newLogger returns a structured (key=value) logger writing to w.
+// In normal operation (UVPIP_DEBUG unset), it logs at LevelInfo so that
+// critical execution failures are recorded without emitting noisy diagnostics
+// on successful runs. When UVPIP_DEBUG is enabled, it logs at LevelDebug.
+// Callers must not log argument values or environment contents: pip arguments
+// can embed index credentials.
 func newLogger(w io.Writer, debug string) *slog.Logger {
-	if !debugEnabled(debug) {
-		return slog.New(slog.DiscardHandler)
+	level := slog.LevelInfo
+	if debugEnabled(debug) {
+		level = slog.LevelDebug
 	}
-	return slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{Level: slog.LevelDebug})).With("component", "uvpip")
+	return slog.New(slog.NewTextHandler(w, &slog.HandlerOptions{Level: level})).With("component", "uvpip")
 }

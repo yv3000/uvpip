@@ -46,7 +46,7 @@ func runUVContext(ctx context.Context, args []string, stdin io.Reader, stdout, s
 	}
 	uvPath, err := findUV()
 	if err != nil {
-		log.Debug("uv discovery failed", "source", source, "error", err)
+		log.Info("uv discovery failed", "source", source, "error", err)
 		fmt.Fprintf(stderr, "[uvpip] %v; install uv: https://docs.astral.sh/uv/getting-started/installation/\n", err)
 		return exitNotFound
 	}
@@ -61,6 +61,7 @@ func runUVContext(ctx context.Context, args []string, stdin io.Reader, stdout, s
 	start := time.Now()
 	code, startErr := exitCode(cmd.Run())
 	if startErr != nil {
+		log.Info("uv execution failed", "path", uvPath, "error", startErr)
 		fmt.Fprintf(stderr, "[uvpip] cannot execute uv at %q: %v\n", uvPath, startErr)
 	}
 	log.Debug("uv exited", "code", code, "duration", time.Since(start))

@@ -12,6 +12,7 @@ Feature and reliability release introducing CLI flag conflict validation, struct
 - Expose global `COVERAGE_THRESHOLD: 90` in `.github/workflows/ci.yml` and pin coverage artifact uploads via `actions/upload-artifact@v7.0.2` with 14-day retention.
 - Add isolated Windows architecture download cases (AMD64, ARM64, WoW64) in `scripts/test-installers.ps1`.
 - Add pip cache isolation semantics, PowerShell 5.1 and 7+ setup instructions, and expanded external contributor review workflows (`README.md`, `CONTRIBUTING.md`).
+- Track community contributor diversification: 3 distinct human contributors active in repository history.
 
 ## v1.0.1 - 2026-10-12
 

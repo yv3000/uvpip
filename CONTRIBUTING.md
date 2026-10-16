@@ -34,7 +34,20 @@ To maintain repository quality, security hygiene, and predictable development ca
    - Strict test coverage gate enforcing >= 90% statement coverage across all operating systems.
 4. **Offline Installer Verification**: Changes affecting shell or PowerShell installers must pass offline test suites (`scripts/test-installers.sh` and `scripts/test-installers.ps1`) without touching real system environments.
 5. **Installer Threat Model Alignment**: Before approving any modifications to `installer/install.sh` or `installer/install.ps1`, reviewers must consult the threat model and trust boundaries defined in [SECURITY.md](SECURITY.md#threat-model-installer-scripts-and-trust-boundaries). Installer changes must preserve staging isolation, respect caller-supplied SHA-256 validation, and never elevate privileges or mutate system-wide configurations.
-6. **Review Turnaround**: Maintainers review open PRs for functional correctness, security impact, and test coverage before merging directly to `main`.
+6. **Review Turnaround & SLAs**: Maintainers review open PRs for functional correctness, security impact, and test coverage before merging directly to `main`. Pull requests receive initial review feedback within 48 to 72 business hours.
+
+### Review SLAs and Turnaround Expectations
+
+External contributions receive timely, transparent review adhering to the following service level agreements:
+
+- **Initial Triage SLA**: Within **48 business hours** of submission, maintainers perform initial review triage, ensuring automated CI matrix jobs run and checking for test pairing.
+- **Review Decision SLA**: Within **72 business hours**, maintainers provide actionable line-by-line feedback, requested refinements, or approval.
+- **Merge Criteria**: A pull request is eligible for merging once it satisfies:
+  1. 100% green status across all 4 GitHub Actions matrix jobs (Lint, macOS, Ubuntu, Windows).
+  2. Maintained statement coverage >= 90% with coverage profile artifact uploaded.
+  3. Strict pairing of implementation changes with sibling tests.
+  4. Zero new third-party runtime dependencies.
+- **Contributor Attribution**: Approved contributions are credited directly in release notes, tracking contributor growth over time.
 
 ## First Contribution Guide: Submitting a PR with Tests
 

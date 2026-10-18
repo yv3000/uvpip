@@ -16,6 +16,16 @@ database. Each invocation runs uv once and exits with uv's status.
 > Running an installer without a local binary downloads the latest published
 > release asset. Use the local-build route below to compile directly from source.
 
+## Installation
+
+### Via PyPI
+```bash
+pip install uvpip
+```
+
+### Via Pre-compiled Native Binaries
+Download native pre-compiled executables for Windows, macOS, and Linux on amd64/arm64 from [GitHub Releases](https://github.com/yv3000/uvpip/releases).
+
 ## Requirements
 
 - A working [uv installation](https://docs.astral.sh/uv/getting-started/installation/)

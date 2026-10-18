@@ -69,6 +69,9 @@ jobs:
       - name: Secret scan (gitleaks)
         run: gitleaks dir --redact --no-banner .
 
+      - name: Python package tests
+        run: PYTHONPATH=src python3 -m unittest discover -s tests
+
   test:
     name: Test (${{ matrix.os }})
     needs: lint

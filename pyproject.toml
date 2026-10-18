@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "uvpip"
+version = "1.0.5"
+description = "Ultra-fast transparent pip wrapper powered by uv"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+    { name = "YASH", email = "191557828+yv3000@users.noreply.github.com" },
+    { name = "trulyimmortal", email = "trulyimmortal80085@gmail.com" }
+]
+keywords = ["pip", "uv", "packaging", "fast", "wrapper", "astral", "python"]
+classifiers = [
+    "Development Status :: 5 - Production/Stable",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Software Development :: Build Tools",
+    "Topic :: System :: Systems Administration",
+]
+dependencies = []
+
+[project.urls]
+Homepage = "https://github.com/yv3000/uvpip"
+Documentation = "https://github.com/yv3000/uvpip#readme"
+Repository = "https://github.com/yv3000/uvpip.git"
+Issues = "https://github.com/yv3000/uvpip/issues"
+Changelog = "https://github.com/yv3000/uvpip/blob/main/CHANGELOG.md"
+
+[project.scripts]
+uvpip = "uvpip:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

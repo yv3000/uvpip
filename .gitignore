@@ -1,7 +1,7 @@
 # Go binaries
-uvpip
-uvpip.exe
-uvpip-*
+/uvpip
+/uvpip.exe
+/uvpip-*
 *.exe
 
 # Build output

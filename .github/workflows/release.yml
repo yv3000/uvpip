@@ -49,6 +49,11 @@ jobs:
             GOOS=$os GOARCH=$arch CGO_ENABLED=0 go build -trimpath -ldflags="-s -w" -o "dist/$out" ./...
           done
 
+      - name: Build Python distribution (wheel & sdist)
+        run: |
+          python3 -m pip install --break-system-packages --upgrade build twine
+          python3 -m build --outdir dist/
+
       - name: Generate SHA-256 Checksums
         working-directory: dist
         run: |
@@ -61,3 +66,13 @@ jobs:
         run: |
           tag="${{ github.ref_name }}"
           gh release create "$tag" dist/* --title "uvpip $tag" --generate-notes
+
+      - name: Publish to PyPI
+        env:
+          PYPI_API_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          if [ -n "${PYPI_API_TOKEN:-}" ]; then
+            python3 -m twine upload --skip-existing -u __token__ -p "$PYPI_API_TOKEN" dist/*.whl dist/*.tar.gz
+          else
+            echo "PYPI_API_TOKEN secret not configured; skipping PyPI upload."
+          fi

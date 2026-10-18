@@ -196,6 +196,55 @@ successfully but a descendant retains its output pipes beyond that bound, uvpip
 reports the incomplete output and returns **1**. This is not a runtime limit on
 package installation and does not bound arbitrary blocking caller-supplied I/O.
 
+### Architecture
+
+`uvpip` is architected as a lean, self-contained CLI wrapper built entirely upon the Go standard library, with **zero external runtime dependencies**. The codebase comprises 19 focused Go files (7 core implementation modules and 12 dedicated verification test suites):
+
+#### Module Responsibilities
+
+| Module | Responsibility |
+|---|---|
+| [`main.go`](main.go) | CLI entry point (`main`, `runCLI`); handles native flags (`--version`, `--help`, `doctor`), initializes structured logging, invokes boundary validation, routes translation, and delegates to the process runner. |
+| [`translator.go`](translator.go) | Argument mapping engine; maps pip subcommands/flags to `uv pip`, validates bundled verbosity flags (`-v`, `-q`), strips confirmation flags (`-y`), and preserves literal arguments after `--`. |
+| [`validate.go`](validate.go) | Input schema validation; enforces boundary limits (`MaxArgCount = 512`, `MaxArgLen = 4096`), blocks embedded null bytes, rejects blank commands, and inspects `UVPIP_UV` override paths. |
+| [`runner.go`](runner.go) | Subprocess supervisor; discovers uv executable path (`findUV`), prepares clean child environments (`buildEnv`), connects I/O streams directly, handles process signals, and bounds pipe draining (`cmd.WaitDelay`). |
+| [`doctor.go`](doctor.go) | Environment diagnostics; verifies PATH resolution for `uv`, `pip`, `pip3`, and `python`, validates installed text shims (`isUvpipShim`), and probes tool versions with timeouts. |
+| [`logging.go`](logging.go) | Structured telemetry; initializes `slog.Logger` with `component=uvpip`, supports opt-in diagnostics via `UVPIP_DEBUG`, and protects against credential leakage in logs. |
+| [`errors.go`](errors.go) | Sentinel error taxonomy; defines standardized domain errors (`ErrInvalidArgs`, `ErrUsage`, `ErrNotShim`, `ErrFlagConflict`, `ErrArgBounds`, `ErrUVNotFound`, `ErrCannotExecute`, `ErrRecursiveExecution`). |
+
+#### Verification Test Suites (12 Specs)
+
+| Test Suite | Coverage Domain |
+|---|---|
+| [`main_test.go`](main_test.go) | CLI entry point dispatch, version reporting, and usage flag routing. |
+| [`runner_test.go`](runner_test.go) | Subprocess launch, exit code mapping, environment construction, and candidate resolution. |
+| [`runner_lifecycle_test.go`](runner_lifecycle_test.go) | Process lifecycle, child interrupt cancellation, and inherited output pipe drain timeouts. |
+| [`translator_test.go`](translator_test.go) | Command translation rules, flag stripping, bundled verbosity, and option arguments. |
+| [`validate_test.go`](validate_test.go) | Input boundary validation and conflicting verbosity flag detection. |
+| [`validate_schema_test.go`](validate_schema_test.go) | Table-driven argument boundary schemas, length caps, and null-byte injection. |
+| [`doctor_test.go`](doctor_test.go) | Health check diagnostics, executable resolution, and shim identification. |
+| [`logging_test.go`](logging_test.go) | Structured logging levels, key-value attributes, and sensitive token redaction. |
+| [`errors_test.go`](errors_test.go) | Sentinel error taxonomy assertions and `errors.Is`/`As` hierarchy unwrapping. |
+| [`integration_test.go`](integration_test.go) | End-to-end command execution, stream pass-through, and mock uv interactions. |
+| [`windows_test.go`](windows_test.go) | Windows-specific `.cmd` shim parsing, case-insensitive PATH lookup, and stream redirection. |
+| [`fuzz_test.go`](fuzz_test.go) | Continuous fuzzing campaigns for argument boundaries, translation invariants, and overrides. |
+
+#### Execution Flow
+
+```mermaid
+flowchart TD
+    A["CLI Invocation (os.Args)"] --> B["main.go: runCLI"]
+    B -->|"doctor"| C["doctor.go: runDoctor"]
+    B -->|"--help / --version"| D["Local Print & Exit 0"]
+    B -->|"pip command"| E["validate.go: ValidateArgs"]
+    E -->|"invalid args"| F["Exit Status 2 (ErrUsage)"]
+    E -->|"valid args"| G["translator.go: translateToUV"]
+    G --> H["runner.go: runUV"]
+    H --> I["runner.go: findUV & buildEnv"]
+    I --> J["exec.CommandContext (uv subprocess)"]
+    J --> K["Direct Stream Passthrough (stdin/stdout/stderr)"]
+```
+
 ### Environment Selection
 
 uvpip preserves the user environment, including explicit `UV_SYSTEM_PYTHON`.

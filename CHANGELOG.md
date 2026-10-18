@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0.5 - 2026-10-18
+
+Architecture, testing rigor, and contributor diversification release introducing explicit sentinel error taxonomy hierarchy, schema boundary validation patterns, structured logging parity across modules, standalone coverage gate tooling, and technical architecture documentation.
+
+- Document comprehensive Technical Architecture and module responsibilities for all 19 Go source and test files in `README.md` alongside an execution flow diagram, cross-linked in `CONTRIBUTING.md` (#18, PR #20 by @trulyimmortal).
+- Introduce dedicated POSIX shell coverage checking script `scripts/check-coverage.sh` parsing `coverage.txt` and enforcing the 90% statement coverage threshold gate across Ubuntu, macOS, and Windows CI matrix jobs (`ci.yml`, `scripts/verify.sh`) (#19, PR #20 by @trulyimmortal).
+- Expand typed sentinel error taxonomy in `errors.go` with domain-specific errors (`ErrNotShim`, `ErrFlagConflict`, `ErrArgBounds`, `ErrNullByte`, `ErrEmptyCommand`) wrapping `ErrUsage` and `ErrInvalidArgs`, verified with table-driven hierarchy unwrapping in `errors_test.go`.
+- Wrap `ErrNotShim` with `%w` in `doctor.go` and introduce consistent `component=uvpip` structured slog telemetry for probe lifecycles.
+- Export `InputValidationPatterns` schema and constants (`MaxArgCount = 512`, `MaxArgLen = 4096`) in `validate.go` with `ValidateArgsWithLogger` providing structured diagnostic parity.
+- Wrap `ErrFlagConflict` in `translator.go` for conflicting verbosity flags (`--quiet` and `--verbose`).
+- Achieve 96.8% statement coverage locally and 100% green matrix CI across all platforms.
+
 ## v1.0.4 - 2026-10-17
 
 Security and discoverability release centralizing exported CLI boundary validation, publishing human-readable test coverage summaries across all platforms, and refining short flag argument parsing.

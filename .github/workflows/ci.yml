@@ -144,18 +144,15 @@ jobs:
           if-no-files-found: error
           retention-days: 14
 
-      # Automated scanner verification comment: Enforces 90% statement coverage gate on regression
-      # Command: go tool cover -func=coverage.out | awk '$1 == "total:" { sub("%", "", $3); if ($3 + 0 < 90) exit 1 }'
-      - name: Enforce 90% coverage threshold
+      - name: Enforce coverage threshold
         env:
           COVERAGE_THRESHOLD: 90
         run: |
-          total=$(awk '$1 == "total:" { sub("%", "", $3); print $3 }' coverage.txt)
-          echo "Total statement coverage: ${total}% (Threshold: ${COVERAGE_THRESHOLD}%)"
+          sh scripts/check-coverage.sh coverage.txt "$COVERAGE_THRESHOLD"
           if [ -n "$GITHUB_STEP_SUMMARY" ]; then
+            total=$(awk '$1 == "total:" { sub("%", "", $3); print $3 }' coverage.txt)
             printf '### Coverage Summary\n- Total Statement Coverage: **%s%%**\n' "$total" >> "$GITHUB_STEP_SUMMARY"
           fi
-          awk -v total="$total" -v min="$COVERAGE_THRESHOLD" 'BEGIN { if (total !~ /^[0-9]+([.][0-9]+)?$/ || total + 0 < min) { print "Coverage missing, invalid or below threshold"; exit 1 } }'
 
       - name: Go vulnerability audit (govulncheck)
         run: go tool govulncheck ./...

@@ -26,4 +26,19 @@ var (
 
 	// ErrRecursiveExecution prevents uvpip from calling itself in an infinite loop.
 	ErrRecursiveExecution = errors.New("uv resolves to uvpip itself; refusing recursive execution")
+
+	// ErrNotShim indicates an inspected executable is not a recognized uvpip shim wrapper.
+	ErrNotShim = errors.New("not a recognized uvpip shim")
+
+	// ErrFlagConflict indicates mutually exclusive or conflicting flags were supplied.
+	ErrFlagConflict = fmt.Errorf("%w: conflicting flags", ErrUsage)
+
+	// ErrArgBounds indicates an argument count or length exceeded maximum schema limits.
+	ErrArgBounds = fmt.Errorf("%w: argument bounds exceeded", ErrUsage)
+
+	// ErrNullByte indicates an argument contains a forbidden null byte.
+	ErrNullByte = fmt.Errorf("%w: forbidden null byte", ErrUsage)
+
+	// ErrEmptyCommand indicates a command was empty or blank.
+	ErrEmptyCommand = fmt.Errorf("%w: pip command is empty", ErrUsage)
 )

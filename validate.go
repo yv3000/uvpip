@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"log/slog"
 	"path/filepath"
 	"strings"
 )
@@ -34,22 +35,48 @@ func ValidateInputs(inputs CLIInputs) error {
 	return nil
 }
 
+// Schema boundary limits on argument count and argument length.
 const (
-	maxArgCount = 512
-	maxArgLen   = 4096
+	MaxArgCount = 512
+	MaxArgLen   = 4096
+	maxArgCount = MaxArgCount
+	maxArgLen   = MaxArgLen
 )
+
+// InputValidationPatterns defines schema validation constraints for CLI arguments.
+type InputValidationPatterns struct {
+	MaxArgCount       int
+	MaxArgLen         int
+	DisallowNull      bool
+	DisallowEmpty     bool
+	DisallowFlagClash bool
+}
+
+// CanonicalValidationSchema represents the authoritative CLI input boundary schema.
+var CanonicalValidationSchema = InputValidationPatterns{
+	MaxArgCount:       MaxArgCount,
+	MaxArgLen:         MaxArgLen,
+	DisallowNull:      true,
+	DisallowEmpty:     true,
+	DisallowFlagClash: true,
+}
+
+// Validate applies schema validation rules to the supplied arguments.
+func (p InputValidationPatterns) Validate(args []string) error {
+	return ValidateArgs(args)
+}
 
 // validateArgBounds verifies schema boundary limits on argument count, argument length, and null-byte injection.
 func validateArgBounds(args []string) error {
-	if len(args) > maxArgCount {
-		return fmt.Errorf("%w: argument count %d exceeds maximum limit (%d)", errUsage, len(args), maxArgCount)
+	if len(args) > MaxArgCount {
+		return fmt.Errorf("%w: argument count %d exceeds maximum limit (%d)", ErrArgBounds, len(args), MaxArgCount)
 	}
 	for i, a := range args {
-		if len(a) > maxArgLen {
-			return fmt.Errorf("%w: argument %d length %d exceeds maximum limit (%d)", errUsage, i, len(a), maxArgLen)
+		if len(a) > MaxArgLen {
+			return fmt.Errorf("%w: argument %d length %d exceeds maximum limit (%d)", ErrArgBounds, i, len(a), MaxArgLen)
 		}
 		if strings.ContainsRune(a, '\x00') {
-			return fmt.Errorf("%w: argument %d contains forbidden null byte", errUsage, i)
+			return fmt.Errorf("%w: argument %d contains forbidden null byte", ErrNullByte, i)
 		}
 	}
 	return nil
@@ -60,12 +87,27 @@ func validateArgBounds(args []string) error {
 // Values are never echoed: arguments can embed index credentials.
 func ValidateArgs(args []string) error {
 	if len(args) == 0 || strings.TrimSpace(args[0]) == "" {
-		return fmt.Errorf("%w: pip command is empty", errUsage)
+		return fmt.Errorf("%w: pip command is empty", ErrEmptyCommand)
 	}
 	if err := validateArgBounds(args); err != nil {
 		return err
 	}
 	return validateTranslationFlags(args)
+}
+
+// ValidateArgsWithLogger validates CLI arguments and records structured diagnostics with the given logger.
+func ValidateArgsWithLogger(args []string, log *slog.Logger) error {
+	err := ValidateArgs(args)
+	if err != nil {
+		if log != nil {
+			log.Info("argument validation failed", "component", "uvpip", "error", err)
+		}
+		return err
+	}
+	if log != nil {
+		log.Debug("argument validation passed", "component", "uvpip", "arg_count", len(args))
+	}
+	return nil
 }
 
 // validateUVOverride checks a non-empty UVPIP_UV before path lookup, so common

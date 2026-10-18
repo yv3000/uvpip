@@ -42,7 +42,7 @@ func validateTranslationFlags(args []string) error {
 			}
 		}
 		if quiet && verbose {
-			return fmt.Errorf("%w: --quiet and --verbose cannot be combined", errUsage)
+			return fmt.Errorf("%w: --quiet and --verbose cannot be combined", ErrFlagConflict)
 		}
 	}
 	return nil

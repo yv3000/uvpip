@@ -13,6 +13,9 @@ import (
 
 // Doctor checks executables, not parent-shell aliases/functions it cannot observe.
 func runDoctor(out io.Writer, log *slog.Logger) int {
+	if log != nil {
+		log.Debug("doctor started", "component", "uvpip")
+	}
 	fmt.Fprintln(out, "uvpip doctor (PATH executables; shell functions are not visible)")
 	code := 0
 	for _, name := range []string{"uv", "pip", "pip3", "python"} {
@@ -29,7 +32,7 @@ func runDoctor(out io.Writer, log *slog.Logger) int {
 		if err == nil {
 			if name == "pip" || name == "pip3" {
 				if !isUvpipShim(path) {
-					err = fmt.Errorf("%s is not a recognized uvpip shim; check PATH precedence", path)
+					err = fmt.Errorf("%w: %s; check PATH precedence", ErrNotShim, path)
 				}
 			} else {
 				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
@@ -46,16 +49,23 @@ func runDoctor(out io.Writer, log *slog.Logger) int {
 			}
 		}
 		if err != nil {
-			log.Info("doctor check failed", "target", name, "error", err)
+			if log != nil {
+				log.Info("doctor check failed", "component", "uvpip", "target", name, "error", err)
+			}
 			fmt.Fprintf(out, "[!!] %s: %v\n", name, err)
 			code = 1
 		} else {
-			log.Debug("doctor check passed", "target", name, "resolved", path)
+			if log != nil {
+				log.Debug("doctor check passed", "component", "uvpip", "target", name, "resolved", path)
+			}
 			fmt.Fprintf(out, "[OK] %s: %s\n", name, path)
 		}
 	}
 	if code != 0 {
 		fmt.Fprintln(out, "Check your installation and restart the shell. Use python -m pip to bypass uvpip.")
+	}
+	if log != nil {
+		log.Debug("doctor completed", "component", "uvpip", "exit_code", code)
 	}
 	return code
 }

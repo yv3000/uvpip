@@ -131,3 +131,47 @@ func TestValidateInputs(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateArgsWithLoggerAndSchema(t *testing.T) {
+	var logBuf bytes.Buffer
+	log := newLogger(&logBuf, "1")
+
+	// Valid arguments
+	err := ValidateArgsWithLogger([]string{"install", "requests"}, log)
+	if err != nil {
+		t.Fatalf("unexpected validation error: %v", err)
+	}
+	if !strings.Contains(logBuf.String(), "argument validation passed") || !strings.Contains(logBuf.String(), "component=uvpip") {
+		t.Errorf("expected passing structured log with component=uvpip, got %s", logBuf.String())
+	}
+
+	// Schema Validate method
+	if err := CanonicalValidationSchema.Validate([]string{"install", "requests"}); err != nil {
+		t.Fatalf("CanonicalValidationSchema.Validate rejected valid args: %v", err)
+	}
+
+	// Specific sentinel error unwrapping
+	logBuf.Reset()
+	errEmpty := ValidateArgsWithLogger([]string{""}, log)
+	if !errors.Is(errEmpty, ErrEmptyCommand) || !errors.Is(errEmpty, ErrUsage) {
+		t.Errorf("expected ErrEmptyCommand wrapping, got %v", errEmpty)
+	}
+	if !strings.Contains(logBuf.String(), "argument validation failed") || !strings.Contains(logBuf.String(), "component=uvpip") {
+		t.Errorf("expected failure structured log with component=uvpip, got %s", logBuf.String())
+	}
+
+	errBounds := ValidateArgs(append([]string{"install"}, make([]string, 513)...))
+	if !errors.Is(errBounds, ErrArgBounds) {
+		t.Errorf("expected ErrArgBounds wrapping, got %v", errBounds)
+	}
+
+	errNull := ValidateArgs([]string{"install", "pkg\x00name"})
+	if !errors.Is(errNull, ErrNullByte) {
+		t.Errorf("expected ErrNullByte wrapping, got %v", errNull)
+	}
+
+	errConflict := ValidateArgs([]string{"install", "-q", "-v"})
+	if !errors.Is(errConflict, ErrFlagConflict) {
+		t.Errorf("expected ErrFlagConflict wrapping, got %v", errConflict)
+	}
+}

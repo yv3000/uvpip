@@ -46,10 +46,47 @@ func TestSentinelErrors(t *testing.T) {
 			err:      ErrRecursiveExecution,
 			expected: "uv resolves to uvpip itself; refusing recursive execution",
 		},
+		{
+			name:     "ErrNotShim",
+			err:      ErrNotShim,
+			expected: "not a recognized uvpip shim",
+		},
+		{
+			name:     "ErrFlagConflict",
+			err:      ErrFlagConflict,
+			expected: "invalid arguments: usage error: conflicting flags",
+		},
+		{
+			name:     "ErrArgBounds",
+			err:      ErrArgBounds,
+			expected: "invalid arguments: usage error: argument bounds exceeded",
+		},
+		{
+			name:     "ErrNullByte",
+			err:      ErrNullByte,
+			expected: "invalid arguments: usage error: forbidden null byte",
+		},
+		{
+			name:     "ErrEmptyCommand",
+			err:      ErrEmptyCommand,
+			expected: "invalid arguments: usage error: pip command is empty",
+		},
 	}
 
 	if !errors.Is(ErrUsage, ErrInvalidArgs) {
 		t.Errorf("expected ErrUsage to wrap ErrInvalidArgs")
+	}
+	if !errors.Is(ErrFlagConflict, ErrUsage) || !errors.Is(ErrFlagConflict, ErrInvalidArgs) {
+		t.Errorf("expected ErrFlagConflict to wrap ErrUsage and ErrInvalidArgs")
+	}
+	if !errors.Is(ErrArgBounds, ErrUsage) || !errors.Is(ErrArgBounds, ErrInvalidArgs) {
+		t.Errorf("expected ErrArgBounds to wrap ErrUsage and ErrInvalidArgs")
+	}
+	if !errors.Is(ErrNullByte, ErrUsage) || !errors.Is(ErrNullByte, ErrInvalidArgs) {
+		t.Errorf("expected ErrNullByte to wrap ErrUsage and ErrInvalidArgs")
+	}
+	if !errors.Is(ErrEmptyCommand, ErrUsage) || !errors.Is(ErrEmptyCommand, ErrInvalidArgs) {
+		t.Errorf("expected ErrEmptyCommand to wrap ErrUsage and ErrInvalidArgs")
 	}
 
 	seen := make(map[string]bool)

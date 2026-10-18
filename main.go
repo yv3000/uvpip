@@ -33,11 +33,11 @@ func runCLI(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}
 
 	// All other args: validate, translate pip → uv, and run
-	if err := ValidateArgs(args); err != nil {
+	log := newLogger(stderr, os.Getenv("UVPIP_DEBUG"))
+	if err := ValidateArgsWithLogger(args, log); err != nil {
 		fmt.Fprintf(stderr, "[uvpip] %v; run uvpip --help for usage\n", err)
 		return 2
 	}
-	log := newLogger(stderr, os.Getenv("UVPIP_DEBUG"))
 	uvArgs := translateToUV(args)
 	// Log only the routed uv command and count; argument values may hold credentials.
 	log.Debug("translated command", "uv_command", uvArgs[0], "arg_count", len(uvArgs))

@@ -98,8 +98,34 @@ func TestDoctorStructuredLogging(t *testing.T) {
 		t.Fatalf("expected exit 1 for failed doctor run, got %d", code)
 	}
 	got := stderr.String()
-	if !strings.Contains(got, `msg="doctor check failed"`) || !strings.Contains(got, "target=uv") {
-		t.Fatalf("expected structured log for doctor failure in stderr, got: %q", got)
+	if !strings.Contains(got, `msg="doctor check failed"`) || !strings.Contains(got, "target=uv") || !strings.Contains(got, "component=uvpip") {
+		t.Fatalf("expected structured log for doctor failure in stderr with component=uvpip, got: %q", got)
+	}
+}
+
+func TestDoctorShimErrorWrapping(t *testing.T) {
+	dir := t.TempDir()
+	fakePip := filepath.Join(dir, "pip")
+	if runtime.GOOS == "windows" {
+		fakePip += ".cmd"
+	}
+	if err := os.WriteFile(fakePip, []byte("echo not a shim"), 0700); err != nil {
+		t.Fatal(err)
+	}
+	t.Setenv("PATH", dir)
+	var out bytes.Buffer
+	var logBuf bytes.Buffer
+	log := newLogger(&logBuf, "1")
+	code := runDoctor(&out, log)
+	if code != 1 {
+		t.Fatalf("expected doctor failure, got code %d", code)
+	}
+	logOutput := logBuf.String()
+	if !strings.Contains(logOutput, "component=uvpip") {
+		t.Errorf("expected component=uvpip in logs, got %s", logOutput)
+	}
+	if !strings.Contains(out.String(), "not a recognized uvpip shim") {
+		t.Errorf("expected shim error message in output, got %s", out.String())
 	}
 }
 

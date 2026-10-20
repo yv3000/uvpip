@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0.6 - 2026-10-20
+
+PyPI distribution, multi-ecosystem packaging, and microbenchmarking release introducing official Python package distribution (`pyproject.toml`, `uvpip` CLI launcher), automated PyPI releases via GitHub Actions, and dedicated Go microbenchmarks.
+
+- Add standard PEP 621 packaging metadata via `pyproject.toml` enabling universal `pip install uvpip` distribution.
+- Implement pure lightweight Python entrypoint wrapper in `src/uvpip/__init__.py` and `__main__.py` supporting `python -m uvpip` execution.
+- Add Python unit test suite `tests/test_py_entrypoint.py` asserting translation invariants and version parity across ecosystems, integrated into CI lint audit.
+- Add dedicated Go microbenchmark test suite `benchmark_test.go` asserting sub-microsecond translation (154 ns/op) and 0-alloc argument/schema validation (87 ns/op) (PR #24 by @trulyimmortal).
+- Document Performance & Speed Comparison benchmarks in `README.md` verifying up to 47.6x faster CLI startup, 46.2x faster package listing, and 24.4x faster resolution against standard Python pip.
+- Add automated PyPI publishing step to GitHub Actions Release workflow (`.github/workflows/release.yml`) using `PYPI_API_TOKEN`.
+- Refine binary ignore patterns in `.gitignore` to anchor root executables while preserving `src/uvpip` source packaging.
+
 ## v1.0.5 - 2026-10-18
 
 Architecture, testing rigor, and contributor diversification release introducing explicit sentinel error taxonomy hierarchy, schema boundary validation patterns, structured logging parity across modules, standalone coverage gate tooling, and technical architecture documentation.

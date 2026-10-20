@@ -6,7 +6,7 @@ from uvpip import __version__, translate_to_uv
 
 class TestUVPipPython(unittest.TestCase):
     def test_version(self):
-        self.assertEqual(__version__, "1.0.5")
+        self.assertEqual(__version__, "1.0.6")
 
     def test_translate_empty(self):
         self.assertEqual(translate_to_uv([]), ["pip"])

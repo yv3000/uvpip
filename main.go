@@ -6,7 +6,7 @@ import (
 	"os"
 )
 
-const version = "1.0.6"
+const version = "1.0.7"
 
 func main() {
 	os.Exit(runCLI(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))

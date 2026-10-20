@@ -1,5 +1,9 @@
 # uvpip
 
+[![PyPI](https://img.shields.io/pypi/v/uvpip-cli.svg)](https://pypi.org/project/uvpip-cli/)
+[![CI](https://github.com/yv3000/uvpip/actions/workflows/ci.yml/badge.svg)](https://github.com/yv3000/uvpip/actions/workflows/ci.yml)
+[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+
 Type `pip`, run [uv](https://github.com/astral-sh/uv).
 
 uvpip is a small Go wrapper that translates common pip commands to uv. Optional
@@ -20,7 +24,7 @@ database. Each invocation runs uv once and exits with uv's status.
 
 ### Via PyPI
 ```bash
-pip install uvpip
+pip install uvpip-cli
 ```
 
 ### Via Pre-compiled Native Binaries

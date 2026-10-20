@@ -7,7 +7,7 @@ import shutil
 import subprocess
 import sys
 
-__version__ = "1.0.6"
+__version__ = "1.0.7"
 
 
 def translate_to_uv(args: list[str]) -> list[str]:

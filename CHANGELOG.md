@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.0.7 - 2026-10-20
+
+PyPI package registration release establishing `uvpip-cli` on PyPI with dual console entrypoints (`uvpip` and `uvpip-cli`), modern SPDX license metadata, README ecosystem badges, and pre-upload metadata validation.
+
+- Register PyPI package identifier as `uvpip-cli` with dual console scripts (`uvpip` and `uvpip-cli`) in `pyproject.toml`.
+- Modernize license metadata with standard SPDX `license = "MIT"` expression.
+- Add live PyPI version, CI build status, and license badges to `README.md`.
+- Add pre-upload `twine check` validation and verbose diagnostics to GitHub Actions release workflow.
+
 ## v1.0.6 - 2026-10-20
 
 PyPI distribution, multi-ecosystem packaging, and microbenchmarking release introducing official Python package distribution (`pyproject.toml`, `uvpip` CLI launcher), automated PyPI releases via GitHub Actions, and dedicated Go microbenchmarks.

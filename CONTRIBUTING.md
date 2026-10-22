@@ -35,6 +35,12 @@ To maintain repository quality, security hygiene, and predictable development ca
 4. **Offline Installer Verification**: Changes affecting shell or PowerShell installers must pass offline test suites (`scripts/test-installers.sh` and `scripts/test-installers.ps1`) without touching real system environments.
 5. **Installer Threat Model Alignment**: Before approving any modifications to `installer/install.sh` or `installer/install.ps1`, reviewers must consult the threat model and trust boundaries defined in [SECURITY.md](SECURITY.md#threat-model-installer-scripts-and-trust-boundaries). Installer changes must preserve staging isolation, respect caller-supplied SHA-256 validation, and never elevate privileges or mutate system-wide configurations.
 6. **Review Turnaround & SLAs**: Maintainers review open PRs for functional correctness, security impact, and test coverage before merging directly to `main`. Pull requests receive initial review feedback within 48 to 72 business hours.
+7. **Structured Error Logging Policy**: Any new error or diagnostic path must log via the structured logger helper (`NewLogger`/`newLogger` in `logging.go` returning `*slog.Logger` with `component=uvpip`) rather than unstructured standard output (`fmt.Println` or `log.Printf`). This preserves telemetry consistency and prevents credential leakage:
+
+```diff
+- fmt.Println("failed to find component:", err)
++ log.Info("component resolution failed", "component", "uvpip", "target", target, "error", err)
+```
 
 ### Review SLAs and Turnaround Expectations
 

@@ -2,6 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/uvpip-cli.svg)](https://pypi.org/project/uvpip-cli/)
 [![CI](https://github.com/yv3000/uvpip/actions/workflows/ci.yml/badge.svg)](https://github.com/yv3000/uvpip/actions/workflows/ci.yml)
+[![Coverage](https://img.shields.io/badge/Coverage-96%25-brightgreen.svg)](https://github.com/yv3000/uvpip/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Type `pip`, run [uv](https://github.com/astral-sh/uv).
@@ -284,6 +285,46 @@ Real-world execution comparison measured on Windows:
 | **Dependency Resolution (`install --dry-run`)** | `4,984.3 ms` | `204.4 ms` | **24.4x faster** |
 
 Wrapper latency over raw `uv` is negligible (<1ms), ensuring that script startup times and automated build pipelines suffer zero penalty.
+
+### Observability, Health & Telemetry
+
+#### Structured Logging via `log/slog`
+
+`uvpip` standardizes on Go's standard library `log/slog` engine for structured, contextual telemetry. Logging is gated by the `UVPIP_DEBUG` environment variable (`UVPIP_DEBUG=1` or `UVPIP_DEBUG=true`). In standard operation, logging operates at `slog.LevelInfo` so that critical execution errors are recorded without emitting noisy diagnostics. When `UVPIP_DEBUG` is active, it automatically transitions to `slog.LevelDebug` with key-value diagnostics.
+
+**Security & Redaction Invariant**: As defined and asserted by [`logging_test.go`](logging_test.go), all telemetry strictly redacts user argument values, index URLs, and environment variables to ensure bearer credentials and auth tokens are never logged.
+
+#### Health Probes (`uvpip --health`)
+
+For automated environments, health checkers, and deployment scripts, `uvpip --health` executes diagnostic checks across the resolved `uv` binary, PATH shims, and Python interpreter, outputting machine-readable JSON:
+
+```bash
+uvpip --health
+```
+
+```json
+{
+  "status": "ok",
+  "healthy": true,
+  "timestamp": "2026-10-22T04:15:00Z",
+  "probes": [
+    {"component": "uv", "status": "healthy", "details": "C:\\Users\\...\\uv.exe"},
+    {"component": "pip", "status": "healthy", "details": "..."},
+    {"component": "pip3", "status": "healthy", "details": "..."},
+    {"component": "python", "status": "healthy", "details": "..."}
+  ]
+}
+```
+
+Exits `0` if all components are healthy, or `1` if degraded.
+
+#### Runtime Metrics & Telemetry (`uvpip --metrics`)
+
+`uvpip --metrics` outputs execution telemetry, goroutine counts, and Go runtime memory statistics (`runtime.MemStats`) formatted as JSON:
+
+```bash
+uvpip --metrics
+```
 
 ### Environment Selection
 

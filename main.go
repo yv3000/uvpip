@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"log/slog"
 	"os"
 )
 
@@ -22,8 +23,14 @@ func runCLI(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	// Handle uvpip-native commands
 	switch args[0] {
 	case "doctor":
-		log := newLogger(stderr, os.Getenv("UVPIP_DEBUG"))
+		log := NewLogger(stderr, os.Getenv("UVPIP_DEBUG"))
 		return runDoctor(stdout, log)
+	case "--health", "health":
+		log := NewLogger(stderr, os.Getenv("UVPIP_DEBUG"))
+		return runHealthCheck(stdout, log)
+	case "--metrics", "metrics":
+		log := NewLogger(stderr, os.Getenv("UVPIP_DEBUG"))
+		return runMetrics(stdout, log)
 	case "--version", "-V":
 		fmt.Fprintf(stdout, "uvpip v%s (uv-powered pip wrapper)\n", version)
 		return 0
@@ -33,7 +40,7 @@ func runCLI(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}
 
 	// All other args: validate against canonical schema, translate pip → uv, and run
-	log := newLogger(stderr, os.Getenv("UVPIP_DEBUG"))
+	log := NewLogger(stderr, os.Getenv("UVPIP_DEBUG"))
 	if err := CanonicalValidationSchema.ValidateWithLogger(args, log); err != nil {
 		fmt.Fprintf(stderr, "[uvpip] %v; run uvpip --help for usage\n", err)
 		return 2
@@ -51,6 +58,8 @@ version: %s
 Usage:
   pip <command> [args]     route supported pip commands through uv
   uvpip doctor            check executable and PATH shim health
+  uvpip --health          structured JSON health check for monitoring
+  uvpip --metrics         structured runtime telemetry and memory metrics
   uvpip --version         show wrapper version
 
 Examples:

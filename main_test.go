@@ -83,3 +83,27 @@ func TestCLIValidationBeforeDiscovery(t *testing.T) {
 		})
 	}
 }
+
+func TestCLIHealthAndMetrics(t *testing.T) {
+	for _, flag := range []string{"--health", "health"} {
+		var stdout, stderr bytes.Buffer
+		code := runCLI([]string{flag}, nil, &stdout, &stderr)
+		if code != 0 && code != 1 {
+			t.Fatalf("runCLI %s exit = %d", flag, code)
+		}
+		if !strings.Contains(stdout.String(), `"status":`) || !strings.Contains(stdout.String(), `"probes":`) {
+			t.Fatalf("unexpected health output: %s", stdout.String())
+		}
+	}
+
+	for _, flag := range []string{"--metrics", "metrics"} {
+		var stdout, stderr bytes.Buffer
+		code := runCLI([]string{flag}, nil, &stdout, &stderr)
+		if code != 0 {
+			t.Fatalf("runCLI %s exit = %d", flag, code)
+		}
+		if !strings.Contains(stdout.String(), `"go_version":`) || !strings.Contains(stdout.String(), `"num_goroutine":`) {
+			t.Fatalf("unexpected metrics output: %s", stdout.String())
+		}
+	}
+}

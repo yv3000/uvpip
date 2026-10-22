@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"runtime"
@@ -181,5 +182,53 @@ func TestDoctorInheritedOutputPipes(t *testing.T) {
 				t.Fatalf("expected both version probes to reject inherited pipes: %s", &out)
 			}
 		})
+	}
+}
+
+func TestHealthCheckAndMetrics(t *testing.T) {
+	// Test CheckHealth
+	status := CheckHealth(nil)
+	if status.Status != "ok" && status.Status != "degraded" {
+		t.Errorf("unexpected status %q", status.Status)
+	}
+	if len(status.Probes) != 4 {
+		t.Errorf("expected 4 probes, got %d", len(status.Probes))
+	}
+	if status.Timestamp == "" {
+		t.Error("expected non-empty timestamp")
+	}
+
+	// Test runHealthCheck
+	var healthOut bytes.Buffer
+	healthCode := runHealthCheck(&healthOut, nil)
+	if healthCode != 0 && healthCode != 1 {
+		t.Errorf("unexpected health exit code %d", healthCode)
+	}
+	var parsedHealth HealthStatus
+	if err := json.Unmarshal(healthOut.Bytes(), &parsedHealth); err != nil {
+		t.Fatalf("failed to parse health JSON output: %v; output: %s", err, healthOut.String())
+	}
+	if parsedHealth.Status == "" {
+		t.Error("expected parsed status")
+	}
+
+	// Test CollectMetrics
+	metrics := CollectMetrics()
+	if metrics.GoVersion == "" || metrics.GOOS == "" || metrics.NumCPU <= 0 {
+		t.Errorf("invalid metrics: %+v", metrics)
+	}
+
+	// Test runMetrics
+	var metricsOut bytes.Buffer
+	metricsCode := runMetrics(&metricsOut, nil)
+	if metricsCode != 0 {
+		t.Errorf("unexpected metrics exit code %d", metricsCode)
+	}
+	var parsedMetrics MetricsData
+	if err := json.Unmarshal(metricsOut.Bytes(), &parsedMetrics); err != nil {
+		t.Fatalf("failed to parse metrics JSON output: %v; output: %s", err, metricsOut.String())
+	}
+	if parsedMetrics.NumGoroutine <= 0 {
+		t.Errorf("expected positive goroutines, got %d", parsedMetrics.NumGoroutine)
 	}
 }

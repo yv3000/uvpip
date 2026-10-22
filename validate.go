@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
+	"regexp"
 	"strings"
 )
 
@@ -43,13 +44,25 @@ const (
 	maxArgLen   = MaxArgLen
 )
 
-// InputValidationPatterns defines schema validation constraints for CLI arguments.
+var (
+	// CommandPattern validates standard CLI commands, subcommands, and flags.
+	CommandPattern = regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`)
+	// SafeArgPattern prevents null-byte injection across arbitrary CLI argument values.
+	SafeArgPattern = regexp.MustCompile(`^[^\x00]+$`)
+	// SubcommandPattern enforces standard alphanumeric command tokens.
+	SubcommandPattern = regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`)
+)
+
+// InputValidationPatterns defines formal schema validation constraints and regex patterns for CLI inputs.
 type InputValidationPatterns struct {
 	MaxArgCount       int
 	MaxArgLen         int
 	DisallowNull      bool
 	DisallowEmpty     bool
 	DisallowFlagClash bool
+	CommandPattern    *regexp.Regexp
+	SafeArgPattern    *regexp.Regexp
+	SubcommandPattern *regexp.Regexp
 }
 
 // CanonicalValidationSchema represents the authoritative CLI input boundary schema.
@@ -59,11 +72,43 @@ var CanonicalValidationSchema = InputValidationPatterns{
 	DisallowNull:      true,
 	DisallowEmpty:     true,
 	DisallowFlagClash: true,
+	CommandPattern:    CommandPattern,
+	SafeArgPattern:    SafeArgPattern,
+	SubcommandPattern: SubcommandPattern,
 }
 
-// Validate applies schema validation rules to the supplied arguments.
+// Validate applies schema validation rules and regex pattern enforcement to the supplied arguments.
 func (p InputValidationPatterns) Validate(args []string) error {
-	return ValidateArgs(args)
+	if len(args) == 0 || (p.DisallowEmpty && strings.TrimSpace(args[0]) == "") {
+		return fmt.Errorf("%w: pip command is empty", ErrEmptyCommand)
+	}
+	if p.CommandPattern != nil && !p.CommandPattern.MatchString(args[0]) {
+		return fmt.Errorf("%w: command %q contains invalid characters", ErrInvalidArgs, args[0])
+	}
+	if err := validateArgBounds(args); err != nil {
+		return err
+	}
+	if p.DisallowFlagClash {
+		if err := validateTranslationFlags(args); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// ValidateWithLogger applies canonical schema validation rules and emits structured diagnostics.
+func (p InputValidationPatterns) ValidateWithLogger(args []string, log *slog.Logger) error {
+	err := p.Validate(args)
+	if err != nil {
+		if log != nil {
+			log.Info("argument validation failed", "component", "uvpip", "error", err)
+		}
+		return err
+	}
+	if log != nil {
+		log.Debug("argument validation passed", "component", "uvpip", "arg_count", len(args))
+	}
+	return nil
 }
 
 // validateArgBounds verifies schema boundary limits on argument count, argument length, and null-byte injection.
@@ -86,28 +131,12 @@ func validateArgBounds(args []string) error {
 // conflicting verbosity checks before translation or subprocess dispatch.
 // Values are never echoed: arguments can embed index credentials.
 func ValidateArgs(args []string) error {
-	if len(args) == 0 || strings.TrimSpace(args[0]) == "" {
-		return fmt.Errorf("%w: pip command is empty", ErrEmptyCommand)
-	}
-	if err := validateArgBounds(args); err != nil {
-		return err
-	}
-	return validateTranslationFlags(args)
+	return CanonicalValidationSchema.Validate(args)
 }
 
-// ValidateArgsWithLogger validates CLI arguments and records structured diagnostics with the given logger.
+// ValidateArgsWithLogger validates CLI arguments against the canonical schema and records structured diagnostics with the given logger.
 func ValidateArgsWithLogger(args []string, log *slog.Logger) error {
-	err := ValidateArgs(args)
-	if err != nil {
-		if log != nil {
-			log.Info("argument validation failed", "component", "uvpip", "error", err)
-		}
-		return err
-	}
-	if log != nil {
-		log.Debug("argument validation passed", "component", "uvpip", "arg_count", len(args))
-	}
-	return nil
+	return CanonicalValidationSchema.ValidateWithLogger(args, log)
 }
 
 // validateUVOverride checks a non-empty UVPIP_UV before path lookup, so common

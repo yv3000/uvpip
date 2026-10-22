@@ -175,3 +175,55 @@ func TestValidateArgsWithLoggerAndSchema(t *testing.T) {
 		t.Errorf("expected ErrFlagConflict wrapping, got %v", errConflict)
 	}
 }
+
+func TestInputValidationPatternsAndRegex(t *testing.T) {
+	if CommandPattern == nil || SafeArgPattern == nil || SubcommandPattern == nil {
+		t.Fatal("expected non-nil regex validation patterns")
+	}
+
+	for _, tt := range []struct {
+		name    string
+		command string
+		want    bool
+	}{
+		{"alphanumeric", "install", true},
+		{"hyphenated", "download-extra", true},
+		{"flag", "--upgrade", true},
+		{"underscore", "show_all", true},
+		{"semicolon injection", "install;rm", false},
+		{"pipe injection", "install|sh", false},
+		{"dollar expansion", "install$VAR", false},
+		{"backtick injection", "install`whoami`", false},
+	} {
+		t.Run("command_pattern_"+tt.name, func(t *testing.T) {
+			got := CommandPattern.MatchString(tt.command)
+			if got != tt.want {
+				t.Errorf("CommandPattern.MatchString(%q) = %v; want %v", tt.command, got, tt.want)
+			}
+		})
+	}
+
+	for _, tt := range []struct {
+		name string
+		arg  string
+		want bool
+	}{
+		{"standard text", "requests==2.31.0", true},
+		{"path with slashes", "/tmp/requirements.txt", true},
+		{"null byte embedded", "pkg\x00extra", false},
+		{"null byte prefix", "\x00test", false},
+	} {
+		t.Run("safe_arg_pattern_"+tt.name, func(t *testing.T) {
+			got := SafeArgPattern.MatchString(tt.arg)
+			if got != tt.want {
+				t.Errorf("SafeArgPattern.MatchString(%q) = %v; want %v", tt.arg, got, tt.want)
+			}
+		})
+	}
+
+	// Assert schema rejects malicious command token
+	badCmdErr := CanonicalValidationSchema.Validate([]string{"install;cat", "requests"})
+	if badCmdErr == nil || !errors.Is(badCmdErr, ErrInvalidArgs) {
+		t.Errorf("expected ErrInvalidArgs on invalid command token, got %v", badCmdErr)
+	}
+}

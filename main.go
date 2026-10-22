@@ -32,9 +32,9 @@ func runCLI(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return 0
 	}
 
-	// All other args: validate, translate pip → uv, and run
+	// All other args: validate against canonical schema, translate pip → uv, and run
 	log := newLogger(stderr, os.Getenv("UVPIP_DEBUG"))
-	if err := ValidateArgsWithLogger(args, log); err != nil {
+	if err := CanonicalValidationSchema.ValidateWithLogger(args, log); err != nil {
 		fmt.Fprintf(stderr, "[uvpip] %v; run uvpip --help for usage\n", err)
 		return 2
 	}

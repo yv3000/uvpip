@@ -7,13 +7,16 @@ import (
 	"os"
 )
 
-const version = "1.0.7"
+const version = "1.0.8"
 
 func main() {
 	os.Exit(runCLI(os.Args[1:], os.Stdin, os.Stdout, os.Stderr))
 }
 
 func runCLI(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
+	log := NewLogger(stderr, os.Getenv("UVPIP_DEBUG"))
+	slog.SetDefault(log)
+
 	// No args: print usage
 	if len(args) == 0 {
 		printUsage(stdout)
@@ -23,13 +26,10 @@ func runCLI(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	// Handle uvpip-native commands
 	switch args[0] {
 	case "doctor":
-		log := NewLogger(stderr, os.Getenv("UVPIP_DEBUG"))
 		return runDoctor(stdout, log)
 	case "--health", "health":
-		log := NewLogger(stderr, os.Getenv("UVPIP_DEBUG"))
 		return runHealthCheck(stdout, log)
 	case "--metrics", "metrics":
-		log := NewLogger(stderr, os.Getenv("UVPIP_DEBUG"))
 		return runMetrics(stdout, log)
 	case "--version", "-V":
 		fmt.Fprintf(stdout, "uvpip v%s (uv-powered pip wrapper)\n", version)
@@ -40,7 +40,6 @@ func runCLI(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 	}
 
 	// All other args: validate against canonical schema, translate pip → uv, and run
-	log := NewLogger(stderr, os.Getenv("UVPIP_DEBUG"))
 	if err := CanonicalValidationSchema.ValidateWithLogger(args, log); err != nil {
 		fmt.Fprintf(stderr, "[uvpip] %v; run uvpip --help for usage\n", err)
 		return 2

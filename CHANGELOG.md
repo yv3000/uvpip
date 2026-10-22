@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0.8 - 2026-10-22
+
+Reliability, security hygiene, and dependency health release introducing formal static input validation regex patterns, structured health check and runtime metrics CLI probes, reproducible Python lockfile tracking, and ecosystem telemetry documentation.
+
+- Implement formal input validation regex schemas (`CommandPattern`, `SafeArgPattern`, `SubcommandPattern`) within `InputValidationPatterns` and enforce `CanonicalValidationSchema.ValidateWithLogger` at the `main.go` entry point.
+- Add machine-readable health check command `uvpip --health` returning structured JSON probe statuses for automated monitoring and CI pipelines.
+- Add execution telemetry and memory telemetry command `uvpip --metrics` returning Go runtime allocations and goroutine metrics via `runtime.MemStats`.
+- Export `NewLogger` structured `log/slog` engine and configure `slog.SetDefault` across runtime modules.
+- Pin Python packaging dependencies with `uv.lock`, add automated Dependabot tracking for `pip`, and add lockfile reproducibility verification to CI.
+- Document Structured Logging via `log/slog`, Health & Telemetry Probes, and structured error logging policy in `README.md` and `CONTRIBUTING.md`.
+- Add test coverage badge to `README.md`.
+
 ## v1.0.7 - 2026-10-20
 
 PyPI package registration release establishing `uvpip-cli` on PyPI with dual console entrypoints (`uvpip` and `uvpip-cli`), modern SPDX license metadata, README ecosystem badges, and pre-upload metadata validation.

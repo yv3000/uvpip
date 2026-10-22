@@ -82,11 +82,11 @@ func (p InputValidationPatterns) Validate(args []string) error {
 	if len(args) == 0 || (p.DisallowEmpty && strings.TrimSpace(args[0]) == "") {
 		return fmt.Errorf("%w: pip command is empty", ErrEmptyCommand)
 	}
-	if p.CommandPattern != nil && !p.CommandPattern.MatchString(args[0]) {
-		return fmt.Errorf("%w: command %q contains invalid characters", ErrInvalidArgs, args[0])
-	}
 	if err := validateArgBounds(args); err != nil {
 		return err
+	}
+	if p.CommandPattern != nil && !p.CommandPattern.MatchString(args[0]) {
+		return fmt.Errorf("%w: command %q contains invalid characters", ErrInvalidArgs, args[0])
 	}
 	if p.DisallowFlagClash {
 		if err := validateTranslationFlags(args); err != nil {

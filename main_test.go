@@ -11,8 +11,8 @@ import (
 )
 
 func TestCLIHelpAndVersion(t *testing.T) {
-	if version != "1.0.7" {
-		t.Fatalf("expected version 1.0.7, got %q", version)
+	if version != "1.0.8" {
+		t.Fatalf("expected version 1.0.8, got %q", version)
 	}
 	t.Setenv("UVPIP_UV", filepath.Join(t.TempDir(), "missing"))
 	for _, args := range [][]string{nil, {"--help"}, {"-h"}, {"--version"}, {"-V"}} {

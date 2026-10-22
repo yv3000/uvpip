@@ -7,7 +7,7 @@ from uvpip import __version__, translate_to_uv
 
 class TestUVPipPython(unittest.TestCase):
     def test_version(self):
-        self.assertEqual(__version__, "1.0.7")
+        self.assertEqual(__version__, "1.0.8")
 
     def test_lockfile_present_and_consistent(self):
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))

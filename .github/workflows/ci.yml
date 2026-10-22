@@ -69,6 +69,11 @@ jobs:
       - name: Secret scan (gitleaks)
         run: gitleaks dir --redact --no-banner .
 
+      - name: Verify Python lockfile and packaging
+        run: |
+          test -f uv.lock || { echo "Missing uv.lock"; exit 1; }
+          python3 -m pip install --dry-run --no-build-isolation .
+
       - name: Python package tests
         run: PYTHONPATH=src python3 -m unittest discover -s tests
 

@@ -8,7 +8,7 @@ version = "1.0.7"
 description = "Ultra-fast transparent pip wrapper powered by uv"
 readme = "README.md"
 requires-python = ">=3.8"
-license = "MIT"
+license = { text = "MIT" }
 authors = [
     { name = "YASH", email = "191557828+yv3000@users.noreply.github.com" },
     { name = "trulyimmortal", email = "trulyimmortal80085@gmail.com" }

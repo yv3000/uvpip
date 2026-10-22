@@ -1,0 +1,8 @@
+version = 1
+revision = 3
+requires-python = ">=3.8"
+
+[[package]]
+name = "uvpip-cli"
+version = "1.0.7"
+source = { editable = "." }

@@ -1,5 +1,6 @@
 """Tests for uvpip Python entrypoint wrapper."""
 
+import os
 import unittest
 from uvpip import __version__, translate_to_uv
 
@@ -7,6 +8,14 @@ from uvpip import __version__, translate_to_uv
 class TestUVPipPython(unittest.TestCase):
     def test_version(self):
         self.assertEqual(__version__, "1.0.7")
+
+    def test_lockfile_present_and_consistent(self):
+        repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        lock_path = os.path.join(repo_root, "uv.lock")
+        self.assertTrue(os.path.isfile(lock_path), "uv.lock must exist for reproducible dependencies")
+        with open(lock_path, "r", encoding="utf-8") as f:
+            content = f.read()
+        self.assertIn(f'version = "{__version__}"', content)
 
     def test_translate_empty(self):
         self.assertEqual(translate_to_uv([]), ["pip"])

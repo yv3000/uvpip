@@ -16,3 +16,11 @@ updates:
     commit-message:
       prefix: "deps(actions)"
     rebase-strategy: "auto"
+  - package-ecosystem: pip
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    commit-message:
+      prefix: "deps(pip)"
+    rebase-strategy: "auto"

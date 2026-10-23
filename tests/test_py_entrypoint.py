@@ -198,13 +198,13 @@ class TestMainCLI(unittest.TestCase):
                 runpy.run_module("uvpip.__main__", run_name="__main__")
             self.assertEqual(ctx.exception.code, 0)
 
-    @patch("uvpip.main")
-    def test_dunder_init_main(self, mock_main):
+    def test_dunder_init_main(self):
         import runpy
-        mock_main.return_value = 0
         repo_root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         init_path = os.path.join(repo_root, "src", "uvpip", "__init__.py")
-        with patch.object(sys, "argv", ["uvpip", "--help"]):
+        with patch("shutil.which", return_value="/mock/bin/uv"), \
+             patch("subprocess.call", return_value=0), \
+             patch.object(sys, "argv", ["uvpip", "--version"]):
             with self.assertRaises(SystemExit) as ctx:
                 runpy.run_path(init_path, run_name="__main__")
             self.assertEqual(ctx.exception.code, 0)

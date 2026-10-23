@@ -43,7 +43,17 @@ jobs:
         run: go vet ./...
 
       - name: Dependency freshness check (go list -m -u)
-        run: go list -m -u all
+        run: |
+          go list -m -u all > dependency_freshness.txt
+          cat dependency_freshness.txt
+          if [ -n "$GITHUB_STEP_SUMMARY" ]; then
+            {
+              echo "### Dependency Freshness (go list -m -u)"
+              echo '```'
+              cat dependency_freshness.txt
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Run linter (golangci-lint)
         run: golangci-lint run ./...

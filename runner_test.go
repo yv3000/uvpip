@@ -389,3 +389,38 @@ func TestBuildEnvKeyCasing(t *testing.T) {
 		}
 	}
 }
+
+// TestOfflineDryRunErrorCodeParity asserts exact error code preservation when running
+// in offline / disconnected environments with dry-run flags and invalid invocations.
+func TestOfflineDryRunErrorCodeParity(t *testing.T) {
+	fixtureUV(t)
+	// Mode 'exit' in fixture causes the mock uv child to output "child failure" and exit 23
+	t.Setenv("UVPIP_TEST_MODE", "exit")
+
+	var stdout, stderr bytes.Buffer
+	// Test simulated offline failed dry-run: pip install --dry-run nonexistent-package
+	args := []string{"install", "--dry-run", "nonexistent-package-offline"}
+	code := runCLI(args, nil, &stdout, &stderr)
+
+	if code != 23 {
+		t.Fatalf("expected exit code 23 faithfully passed through from uv, got %d", code)
+	}
+	if !strings.Contains(stderr.String(), "child failure") {
+		t.Fatalf("expected child failure output passed through to stderr, got %q", stderr.String())
+	}
+
+	// Test CLI invalid blank command returning 2 (pip usage error parity)
+	var errBuf bytes.Buffer
+	blankCode := runCLI([]string{""}, nil, io.Discard, &errBuf)
+	if blankCode != 2 {
+		t.Fatalf("expected exit code 2 for invalid blank command, got %d", blankCode)
+	}
+
+	// Test missing uv returning 127
+	t.Setenv("UVPIP_UV", filepath.Join(t.TempDir(), "nonexistent-uv-binary.exe"))
+	var missingBuf bytes.Buffer
+	missingCode := runCLI([]string{"list"}, nil, io.Discard, &missingBuf)
+	if missingCode != 127 {
+		t.Fatalf("expected exit code 127 when uv cannot be found, got %d", missingCode)
+	}
+}

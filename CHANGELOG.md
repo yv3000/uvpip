@@ -1,5 +1,14 @@
 # Changelog
 
+## v1.1.0 - 2026-10-23
+
+Refactoring, test suite decomposition, Python test breadth, and dependency automation release addressing codebase cleanliness and contributor diversity.
+
+- Decompose monolithic `runner_test.go` (425 LOC) into two focused suites: `runner_exec_test.go` (206 LOC, process execution & exit codes) and `runner_env_test.go` (230 LOC, environment discovery & buildEnv), eliminating dominant file risk and keeping all test suites strictly under 250 LOC (#27, PR #29 by @trulyimmortal).
+- Add dedicated `tests/test_cli_translation.py` test suite exercising `uvpip-cli` console script argument passthrough, non-zero exit propagation, and stderr forwarding (#28, PR #30 by @trulyimmortal).
+- Record `go list -m -u all` dependency freshness output directly to GitHub Actions `$GITHUB_STEP_SUMMARY` in CI for visible per-run supply chain tracking.
+- Update technical architecture documentation in `README.md` to reflect 21 focused Go files and 14 distinct verification test suites.
+
 ## v1.0.9 - 2026-10-23
 
 Architecture robustness, supply-chain dependency health, and test coverage expansion release introducing Python dependency vulnerability scanning (`pip-audit`), a 90% Python coverage gate, live coverage badge automation, installer edge-case coverage, and offline dry-run error code parity assertions.

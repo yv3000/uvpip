@@ -173,7 +173,7 @@ Expected load is ordinary interactive and scripted CLI use, including redirected
 streams and activated environments, not a long-running backend.
 
 1. **Running-child cancellation is not tested.**
-   `runner_test.go:TestRunUVContextCancellation` cancels before starting uv.
+   `runner_exec_test.go:TestRunUVContextCancellation` cancels before starting uv.
    It cannot detect a regression that leaves a running child alive. Add a
    readiness handshake and cancel only after the fixture is actually running.
    Verify prompt return, non-success status and child cleanup. Keep pre-cancel

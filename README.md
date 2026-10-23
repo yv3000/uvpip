@@ -227,6 +227,10 @@ package installation and does not bound arbitrary blocking caller-supplied I/O.
 | [`logging.go`](logging.go) | Structured telemetry; initializes `slog.Logger` with `component=uvpip`, supports opt-in diagnostics via `UVPIP_DEBUG`, and protects against credential leakage in logs. |
 | [`errors.go`](errors.go) | Sentinel error taxonomy; defines standardized domain errors (`ErrInvalidArgs`, `ErrUsage`, `ErrNotShim`, `ErrFlagConflict`, `ErrArgBounds`, `ErrUVNotFound`, `ErrCannotExecute`, `ErrRecursiveExecution`). |
 
+#### Logging Architecture
+
+Structured telemetry throughout `uvpip` is implemented using Go's standard library `log/slog` framework. All entry points (`main.go`, `runner.go`, `doctor.go`, `validate.go`) initialize or consume `*slog.Logger` with `component=uvpip`. By default, logging operates at `slog.LevelInfo` to record critical execution failures to `stderr` without polluting standard CLI output. When `UVPIP_DEBUG=1` is provided, the handler switches to `slog.LevelDebug` for full process telemetry. All sensitive parameters (package URLs with basic auth, token headers, user arguments) are strictly redacted to prevent credential exposure.
+
 #### Verification Test Suites (13 Specs)
 
 | Test Suite | Coverage Domain |

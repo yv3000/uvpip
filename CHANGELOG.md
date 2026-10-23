@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.0.9 - 2026-10-23
+
+Architecture robustness, supply-chain dependency health, and test coverage expansion release introducing Python dependency vulnerability scanning (`pip-audit`), a 90% Python coverage gate, live coverage badge automation, installer edge-case coverage, and offline dry-run error code parity assertions.
+
+- Add supply-chain dependency vulnerability scanning for Python packaging via pinned `pip-audit==2.7.3` in `.github/workflows/ci.yml`.
+- Enforce strict 90% Python test coverage gate in CI (`coverage report -m --fail-under=90`) with comprehensive unit test coverage for `uvpip` Python CLI launcher, PATH fallback search, and virtualenv configuration in `tests/test_py_entrypoint.py`.
+- Add `scripts/update-coverage-badge.sh` to dynamically synchronize `README.md` test coverage badge with live test metrics, enforced against drift in CI.
+- Add offline installer edge-case test suites for trailing slashes and custom directory targets in `scripts/test-installers.ps1` and `scripts/test-installers.sh` (#22, PR #25 by @trulyimmortal).
+- Add offline dry-run test assertions in `runner_test.go` verifying exit status parity across subprocess exits, invalid command inputs, and missing binaries (#23, PR #26 by @trulyimmortal).
+- Document `log/slog` structured logging architecture and telemetry configuration in `logging.go` and `README.md`.
+
 ## v1.0.8 - 2026-10-22
 
 Reliability, security hygiene, and dependency health release introducing formal static input validation regex patterns, structured health check and runtime metrics CLI probes, reproducible Python lockfile tracking, and ecosystem telemetry documentation.

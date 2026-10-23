@@ -62,6 +62,11 @@ try {
         $binDir = Join-Path $env:USERPROFILE '.uvpip\bin'
         Assert (Test-UvpipPath $binDir.ToUpperInvariant()) 'case insensitive exact PATH match'
         Assert (Test-UvpipPath ('"' + $binDir + '\"')) 'quoted PATH with trailing separator'
+        Assert (Test-UvpipPath ($binDir + '\')) 'PATH with trailing backslash'
+        Assert (Test-UvpipPath ($binDir + '/')) 'PATH with trailing forward slash'
+        Assert (Test-UvpipPath ($binDir + '///')) 'PATH with multiple trailing slashes'
+        Assert (-not (Test-UvpipPath '')) 'empty PATH entry rejection'
+        Assert (-not (Test-UvpipPath '   ')) 'whitespace-only PATH entry rejection'
         Assert (-not (Test-UvpipPath ($binDir + '-other'))) 'PATH substring match'
         $entries = @('first', $binDir, '', ($binDir + '-other'), 'last') | Where-Object { -not (Test-UvpipPath $_) }
         Assert (($entries -join ';') -eq "first;;$binDir-other;last") 'PATH entry preservation'

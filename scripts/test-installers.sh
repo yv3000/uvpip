@@ -227,5 +227,15 @@ for shim in pip pip3; do
     [ "$status" = 23 ] || fail 'repository shim exit status'
 done
 uninstall
+
+# Trailing slash and custom directory target edge-case verification
+mkdir -p "$WORK/trailing-test/"
+cp "$WORK/fixture" "$WORK/trailing-test/fixture"
+UVPIP_BINARY="$WORK/trailing-test/fixture"
+UVPIP_NO_PROFILE=1 install
+[ -x "$HOME/.uvpip/bin/uvpip" ] || fail 'install with trailing slash source path failed'
+uninstall
+export UVPIP_BINARY="$WORK/fixture"
+
 no_stage
 printf '%s\n' 'PASS: offline POSIX installer/uninstaller tests'

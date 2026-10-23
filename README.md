@@ -213,7 +213,7 @@ package installation and does not bound arbitrary blocking caller-supplied I/O.
 
 ### Architecture
 
-`uvpip` is architected as a lean, self-contained CLI wrapper built entirely upon the Go standard library, with **zero external runtime dependencies**. The codebase comprises 20 focused Go files (7 core implementation modules and 13 dedicated verification test suites):
+`uvpip` is architected as a lean, self-contained CLI wrapper built entirely upon the Go standard library, with **zero external runtime dependencies**. The codebase comprises 21 focused Go files (7 core implementation modules and 14 dedicated verification test suites):
 
 #### Module Responsibilities
 
@@ -231,12 +231,13 @@ package installation and does not bound arbitrary blocking caller-supplied I/O.
 
 Structured telemetry throughout `uvpip` is implemented using Go's standard library `log/slog` framework. All entry points (`main.go`, `runner.go`, `doctor.go`, `validate.go`) initialize or consume `*slog.Logger` with `component=uvpip`. By default, logging operates at `slog.LevelInfo` to record critical execution failures to `stderr` without polluting standard CLI output. When `UVPIP_DEBUG=1` is provided, the handler switches to `slog.LevelDebug` for full process telemetry. All sensitive parameters (package URLs with basic auth, token headers, user arguments) are strictly redacted to prevent credential exposure.
 
-#### Verification Test Suites (13 Specs)
+#### Verification Test Suites (14 Specs)
 
 | Test Suite | Coverage Domain |
 |---|---|
 | [`main_test.go`](main_test.go) | CLI entry point dispatch, version reporting, and usage flag routing. |
-| [`runner_test.go`](runner_test.go) | Subprocess launch, exit code mapping, environment construction, and candidate resolution. |
+| [`runner_exec_test.go`](runner_exec_test.go) | Subprocess execution, exit code mapping, and offline parity assertions. |
+| [`runner_env_test.go`](runner_env_test.go) | Candidate resolution, environment construction, and recursion protection. |
 | [`runner_lifecycle_test.go`](runner_lifecycle_test.go) | Process lifecycle, child interrupt cancellation, and inherited output pipe drain timeouts. |
 | [`translator_test.go`](translator_test.go) | Command translation rules, flag stripping, bundled verbosity, and option arguments. |
 | [`validate_test.go`](validate_test.go) | Input boundary validation and conflicting verbosity flag detection. |

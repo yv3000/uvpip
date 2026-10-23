@@ -56,7 +56,7 @@ Doctor probes use their own five-second context timeout and one-second drain bou
 ## Tests
 
 Each `*.go` file has a `*_test.go` sibling, and `integration_test.go` exercises
-a simulated installation layout, doctor/CLI execution and cleanup. `runner_test.go`'s `TestMain` turns
+a simulated installation layout, doctor/CLI execution and cleanup. `runner_exec_test.go`'s `TestMain` turns
 the test binary into an offline fake uv (`fixtureUV`), so subprocess behavior is
 tested without uv or network. Installer suites in `scripts/` mock `curl`, `uname`,
 and uv. CI enforces a 90% statement-coverage floor; see [CONTRIBUTING.md](CONTRIBUTING.md).

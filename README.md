@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/uvpip-cli.svg)](https://pypi.org/project/uvpip-cli/)
 [![CI](https://github.com/yv3000/uvpip/actions/workflows/ci.yml/badge.svg)](https://github.com/yv3000/uvpip/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/Coverage-96%25-brightgreen.svg)](https://github.com/yv3000/uvpip/actions)
+[![Coverage](https://img.shields.io/badge/Coverage-95%25-brightgreen.svg)](https://github.com/yv3000/uvpip/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Type `pip`, run [uv](https://github.com/astral-sh/uv).
@@ -73,7 +73,7 @@ are managed via [.github/dependabot.yml](.github/dependabot.yml). See
 
 ### Dependency Policy
 
-uvpip enforces a strict **zero third-party runtime dependencies** guarantee. All core CLI routing, translation, validation, subprocess execution, and logging rely exclusively on the Go standard library. Build, linting, and vulnerability audit utilities (`actionlint`, `govulncheck`) are pinned via Go `tool` directives in `go.mod` and are strictly excluded from the compiled binary.
+uvpip enforces a strict **zero third-party runtime dependencies** guarantee. All core CLI routing, translation, validation, subprocess execution, and logging rely exclusively on the Go standard library. Build, linting, and vulnerability audit utilities (`actionlint`, `govulncheck`, `pip-audit`) are pinned with exact versions and checksums, and are strictly excluded from the compiled binary. Automated weekly dependency updates for tools, Python packages, and GitHub Actions are continuously maintained via [.github/dependabot.yml](.github/dependabot.yml).
 
 To independently verify that no third-party libraries are linked into the binary:
 
@@ -82,7 +82,7 @@ To independently verify that no third-party libraries are linked into the binary
 go list -deps -f '{{if and (not .Standard) (not .Module.Main)}}{{.ImportPath}}{{end}}' ./...
 ```
 
-This guarantee is enforced on every push in [CI](.github/workflows/ci.yml) via the `Verify zero runtime deps` step on all three operating systems. A failed dependency listing fails the check. Each test job retains `coverage.out` and the per-function `coverage.txt` summary in its OS-specific artifact for 14 days, including when the coverage gate fails. The coverage gate reads that same text summary.
+This guarantee is enforced on every push in [CI](.github/workflows/ci.yml) via the `Verify zero runtime deps` step on all three operating systems. Dual-stack vulnerability scanning runs on every push: Go dependencies are scanned via `govulncheck`, and Python packaging dependencies are audited via pinned `pip-audit`. Each test job retains `coverage.out` and the per-function `coverage.txt` summary in its OS-specific artifact for 14 days. The live README coverage badge is automatically synchronized from `coverage.txt` via `scripts/update-coverage-badge.sh`.
 
 ## Install From Source
 

@@ -74,8 +74,16 @@ jobs:
           test -f uv.lock || { echo "Missing uv.lock"; exit 1; }
           python3 -m pip install --dry-run --no-build-isolation .
 
-      - name: Python package tests
-        run: PYTHONPATH=src python3 -m unittest discover -s tests
+      - name: Python dependency vulnerability audit (pip-audit)
+        run: |
+          python3 -m pip install --break-system-packages pip-audit==2.7.3
+          python3 -m pip_audit .
+
+      - name: Python package tests and coverage gate
+        run: |
+          python3 -m pip install --break-system-packages coverage==7.6.10
+          PYTHONPATH=src coverage run --source=uvpip -m unittest discover -s tests
+          coverage report -m --fail-under=90
 
   test:
     name: Test (${{ matrix.os }})
@@ -161,6 +169,15 @@ jobs:
             total=$(awk '$1 == "total:" { sub("%", "", $3); print $3 }' coverage.txt)
             printf '### Coverage Summary\n- Total Statement Coverage: **%s%%**\n' "$total" >> "$GITHUB_STEP_SUMMARY"
           fi
+
+      - name: Verify README coverage badge matches statement coverage
+        if: matrix.os == 'ubuntu-24.04'
+        run: |
+          sh scripts/update-coverage-badge.sh coverage.txt README.md
+          git diff --exit-code README.md || {
+            echo "README.md coverage badge is stale; run scripts/update-coverage-badge.sh"
+            exit 1
+          }
 
       - name: Go vulnerability audit (govulncheck)
         run: go tool govulncheck ./...

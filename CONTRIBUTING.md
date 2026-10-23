@@ -25,7 +25,7 @@ We welcome external contributions, bug reports, and improvements from the commun
 
 To maintain repository quality, security hygiene, and predictable development cadence, all pull requests undergo structured review against the following criteria:
 
-1. **Focused Commit Pairing**: Land changes as small, separately reviewable commits. Every commit introducing or modifying behavior must pair the source code change with its corresponding test file update (e.g., `validate.go` + `validate_test.go` or `runner.go` + `runner_test.go`). Avoid bulk commits that mix formatting, refactoring, and features.
+1. **Focused Commit Pairing**: Land changes as small, separately reviewable commits. Every commit introducing or modifying behavior must pair the source code change with its corresponding test file update (e.g., `validate.go` + `validate_test.go` or `runner.go` + `runner_exec_test.go` / `runner_env_test.go`). Avoid bulk commits that mix formatting, refactoring, and features.
 2. **Standard Library First**: Adhere to YAGNI and minimalist principles. `uvpip` carries zero third-party Go runtime dependencies. Do not introduce runtime dependencies or speculative abstractions.
 3. **Automated CI Gates**: Every pull request must pass the full multi-platform matrix in GitHub Actions:
    - Ubuntu 24.04, macOS 14, and Windows Server 2022.
@@ -58,9 +58,9 @@ External contributions receive timely, transparent review adhering to the follow
 ## First Contribution Guide: Submitting a PR with Tests
 
 To make your first contribution smooth and reviewable:
-1. **Understand the Architecture**: Review the [Architecture Overview](README.md#architecture) describing the responsibilities of all 19 Go files and the execution flow before proposing or contributing changes.
+1. **Understand the Architecture**: Review the [Architecture Overview](README.md#architecture) describing the responsibilities of all 21 Go files and the execution flow before proposing or contributing changes.
 2. **Choose a focused change**: Pick an isolated bug fix, documentation refinement, or small testable enhancement.
-3. **Follow the Test-Paired Pattern**: Every change to an implementation file (such as `runner.go`, `doctor.go`, or `validate.go`) must be accompanied by updates to its sibling test file (such as `runner_test.go`, `doctor_test.go`, or `validate_schema_test.go`). Use table-driven subtests (`t.Run`) and mock environments where applicable, following the pattern demonstrated in `runner_test.go`'s `TestUvCandidatePaths`.
+3. **Follow the Test-Paired Pattern**: Every change to an implementation file (such as `runner.go`, `doctor.go`, or `validate.go`) must be accompanied by updates to its sibling test file (such as `runner_exec_test.go`, `doctor_test.go`, or `validate_schema_test.go`). Use table-driven subtests (`t.Run`) and mock environments where applicable, following the pattern demonstrated in `runner_env_test.go`'s `TestUvCandidatePaths`.
 4. **Run local offline verification**: Ensure offline tests pass with >= 90% statement coverage before opening a PR:
    ```powershell
    powershell.exe -ExecutionPolicy Bypass -File scripts/verify.ps1 -TestRoot $tests -CacheRoot $cache

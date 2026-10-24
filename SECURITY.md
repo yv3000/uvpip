@@ -17,11 +17,7 @@ dumps or package-index credentials.
 
 ## Release Status
 
-The revised source described in README is unreleased. Published v1.0.0 binaries
-do not acquire source fixes when the branch changes. No maintained backport
-schedule or security-support lifetime is promised. Check the changelog and exact
-release provenance before deployment; use reviewed source builds when you need
-the unreleased behavior.
+Official multi-platform binaries and Python packages are published via [GitHub Releases](https://github.com/yv3000/uvpip/releases) and [PyPI](https://pypi.org/project/uvpip-cli/) for each tagged version (current: **v1.1.0**). Legacy release binaries do not acquire source fixes retrospectively. No maintained backport schedule or long-term security-support lifetime for older versions is promised. Check [CHANGELOG.md](CHANGELOG.md) for exact release provenance and migration notes; use reviewed source builds when you need unreleased behavior directly from `main`.
 
 ## Threat Model: Installer Scripts and Trust Boundaries
 

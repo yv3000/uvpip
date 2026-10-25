@@ -1,4 +1,4 @@
-> Please review our [Contributing Guidelines](CONTRIBUTING.md) before submitting. All pull requests must pass the CI suite and maintain zero runtime dependencies.
+> Please review our [Contributing Guidelines](../CONTRIBUTING.md) before submitting. All pull requests must pass the CI suite and maintain zero runtime dependencies.
 
 ## Description
 A concise description of the changes introduced by this pull request.
@@ -9,7 +9,7 @@ Fixes #(issue number)
 ## Changes
 - [ ] Source implementation change paired with sibling test file update
 - [ ] Added/updated unit and integration assertions
-- [ ] Documentation updated ([README.md](README.md), [ARCHITECTURE.md](ARCHITECTURE.md), [CONTRIBUTING.md](CONTRIBUTING.md))
+- [ ] Documentation updated ([README.md](../README.md), [ARCHITECTURE.md](../ARCHITECTURE.md), [CONTRIBUTING.md](../CONTRIBUTING.md))
 
 ## Verification Checklist
 - [ ] `gofmt -l .` reports zero unformatted files

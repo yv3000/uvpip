@@ -29,7 +29,14 @@ classifiers = [
     "Topic :: Software Development :: Build Tools",
     "Topic :: System :: Systems Administration",
 ]
+# Pure standard-library Python wrapper; 0 third-party runtime dependencies required
 dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "coverage==7.6.10",
+    "pip-audit==2.7.3",
+]
 
 [project.urls]
 Homepage = "https://github.com/yv3000/uvpip"

@@ -258,4 +258,3 @@ func TestRunMetrics_Logging(t *testing.T) {
 		t.Fatalf("expected telemetry log in debug output: %s", logBuf.String())
 	}
 }
-

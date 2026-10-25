@@ -6,6 +6,8 @@ labels: ['enhancement', 'good first issue']
 assignees: ''
 ---
 
+> Please review our [Contributing Guidelines](CONTRIBUTING.md) before submitting.
+
 ## Feature Summary
 A concise description of the suggested enhancement or pip compatibility mapping.
 

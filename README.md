@@ -2,7 +2,7 @@
 
 [![PyPI](https://img.shields.io/pypi/v/uvpip-cli.svg)](https://pypi.org/project/uvpip-cli/)
 [![CI](https://github.com/yv3000/uvpip/actions/workflows/ci.yml/badge.svg)](https://github.com/yv3000/uvpip/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/Coverage-95%25-brightgreen.svg)](https://github.com/yv3000/uvpip/actions)
+[![Coverage](https://img.shields.io/badge/Coverage-97%25-brightgreen.svg)](https://github.com/yv3000/uvpip/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 Type `pip`, run [uv](https://github.com/astral-sh/uv).
@@ -213,7 +213,7 @@ package installation and does not bound arbitrary blocking caller-supplied I/O.
 
 ### Architecture
 
-`uvpip` is architected as a lean, self-contained CLI wrapper built entirely upon the Go standard library, with **zero external runtime dependencies**. The codebase comprises 21 focused Go files (7 core implementation modules and 14 dedicated verification test suites):
+`uvpip` is architected as a lean, self-contained CLI wrapper built entirely upon the Go standard library, with **zero external runtime dependencies**. The codebase comprises 22 focused Go files (7 core implementation modules and 15 dedicated verification test suites):
 
 #### Module Responsibilities
 
@@ -231,7 +231,7 @@ package installation and does not bound arbitrary blocking caller-supplied I/O.
 
 Structured telemetry throughout `uvpip` is implemented using Go's standard library `log/slog` framework. All entry points (`main.go`, `runner.go`, `doctor.go`, `validate.go`) initialize or consume `*slog.Logger` with `component=uvpip`. By default, logging operates at `slog.LevelInfo` to record critical execution failures to `stderr` without polluting standard CLI output. When `UVPIP_DEBUG=1` is provided, the handler switches to `slog.LevelDebug` for full process telemetry. All sensitive parameters (package URLs with basic auth, token headers, user arguments) are strictly redacted to prevent credential exposure.
 
-#### Verification Test Suites (14 Specs)
+#### Verification Test Suites (15 Specs)
 
 | Test Suite | Coverage Domain |
 |---|---|
@@ -242,6 +242,7 @@ Structured telemetry throughout `uvpip` is implemented using Go's standard libra
 | [`translator_test.go`](translator_test.go) | Command translation rules, flag stripping, bundled verbosity, and option arguments. |
 | [`validate_test.go`](validate_test.go) | Input boundary validation and conflicting verbosity flag detection. |
 | [`validate_schema_test.go`](validate_schema_test.go) | Table-driven argument boundary schemas, length caps, and null-byte injection. |
+| [`validate_boundaries_test.go`](validate_boundaries_test.go) | Explicit CLI subcommand boundary enforcement across install, uninstall, freeze, list, and doctor. |
 | [`doctor_test.go`](doctor_test.go) | Health check diagnostics, executable resolution, and shim identification. |
 | [`logging_test.go`](logging_test.go) | Structured logging levels, key-value attributes, and sensitive token redaction. |
 | [`errors_test.go`](errors_test.go) | Sentinel error taxonomy assertions and `errors.Is`/`As` hierarchy unwrapping. |

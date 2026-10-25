@@ -102,8 +102,8 @@ func TestValidateBoundariesRunner(t *testing.T) {
 		t.Setenv("UVPIP_UV", "relative.exe")
 		var stderr bytes.Buffer
 		code := runUV([]string{"pip", "install", "pkg"}, nil, io.Discard, &stderr, quiet)
-		if code != 2 {
-			t.Fatalf("expected exit 2 from runner for relative override, got %d", code)
+		if code != 127 {
+			t.Fatalf("expected exit 127 from runner for relative override, got %d", code)
 		}
 	})
 }

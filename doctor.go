@@ -29,35 +29,7 @@ func runDoctor(out io.Writer, log *slog.Logger) int {
 	fmt.Fprintln(out, "uvpip doctor (PATH executables; shell functions are not visible)")
 	code := 0
 	for _, name := range []string{"uv", "pip", "pip3", "python"} {
-		var path string
-		var err error
-		if name == "uv" {
-			path, err = findUV()
-		} else {
-			path, err = exec.LookPath(name)
-			if name == "python" && err != nil {
-				path, err = exec.LookPath("python3")
-			}
-		}
-		if err == nil {
-			if name == "pip" || name == "pip3" {
-				if !isUvpipShim(path) {
-					err = fmt.Errorf("%w: %s; check PATH precedence", ErrNotShim, path)
-				}
-			} else {
-				ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
-				// path comes from findUV/exec.LookPath; probing its version is the check itself.
-				cmd := exec.CommandContext(ctx, path, "--version") //nolint:gosec // G204: intentional probe of a resolved executable.
-				// Descendants can inherit output pipes after the probed process exits.
-				cmd.WaitDelay = time.Second
-				output, runErr := cmd.Output()
-				cancel()
-				err = runErr
-				if err == nil {
-					path += " (" + strings.TrimSpace(string(output)) + ")"
-				}
-			}
-		}
+		resolved, err := probeTarget(name, true)
 		if err != nil {
 			if log != nil {
 				log.Info("doctor check failed", "component", "uvpip", "target", name, "error", err)
@@ -66,9 +38,9 @@ func runDoctor(out io.Writer, log *slog.Logger) int {
 			code = 1
 		} else {
 			if log != nil {
-				log.Debug("doctor check passed", "component", "uvpip", "target", name, "resolved", path)
+				log.Debug("doctor check passed", "component", "uvpip", "target", name, "resolved", resolved)
 			}
-			fmt.Fprintf(out, "[OK] %s: %s\n", name, path)
+			fmt.Fprintf(out, "[OK] %s: %s\n", name, resolved)
 		}
 	}
 	if code != 0 {
@@ -98,6 +70,42 @@ func isUvpipShim(path string) bool {
 		strings.Contains(content, `"%userprofile%\.uvpip\bin\uvpip.exe" %*`)
 }
 
+// probeTarget inspects a single named executable or shim and returns its resolved path or error.
+// If probeVersion is true, it also executes --version with a bounded timeout and drain bound.
+func probeTarget(name string, probeVersion bool) (string, error) {
+	var path string
+	var err error
+	if name == "uv" {
+		path, err = findUV()
+	} else {
+		path, err = exec.LookPath(name)
+		if name == "python" && err != nil {
+			path, err = exec.LookPath("python3")
+		}
+	}
+	if err != nil {
+		return "", err
+	}
+	if name == "pip" || name == "pip3" {
+		if !isUvpipShim(path) {
+			return path, fmt.Errorf("%w: %s; check PATH precedence", ErrNotShim, path)
+		}
+		return path, nil
+	}
+	if probeVersion {
+		ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		cmd := exec.CommandContext(ctx, path, "--version") //nolint:gosec // G204: intentional probe of a resolved executable.
+		cmd.WaitDelay = time.Second
+		output, runErr := cmd.Output()
+		if runErr != nil {
+			return path, runErr
+		}
+		return path + " (" + strings.TrimSpace(string(output)) + ")", nil
+	}
+	return path, nil
+}
+
 // HealthProbe represents an individual component health check outcome.
 type HealthProbe struct {
 	Component string `json:"component"`
@@ -119,23 +127,7 @@ func CheckHealth(log *slog.Logger) HealthStatus {
 	healthy := true
 	var probes []HealthProbe
 	for _, name := range []string{"uv", "pip", "pip3", "python"} {
-		var path string
-		var err error
-		if name == "uv" {
-			path, err = findUV()
-		} else {
-			path, err = exec.LookPath(name)
-			if name == "python" && err != nil {
-				path, err = exec.LookPath("python3")
-			}
-		}
-		if err == nil {
-			if name == "pip" || name == "pip3" {
-				if !isUvpipShim(path) {
-					err = fmt.Errorf("%w: %s; check PATH precedence", ErrNotShim, path)
-				}
-			}
-		}
+		resolved, err := probeTarget(name, false)
 		if err != nil {
 			healthy = false
 			probes = append(probes, HealthProbe{
@@ -150,10 +142,10 @@ func CheckHealth(log *slog.Logger) HealthStatus {
 			probes = append(probes, HealthProbe{
 				Component: name,
 				Status:    "healthy",
-				Details:   path,
+				Details:   resolved,
 			})
 			if log != nil {
-				log.Debug("health probe passed", "component", "uvpip", "target", name, "path", path)
+				log.Debug("health probe passed", "component", "uvpip", "target", name, "path", resolved)
 			}
 		}
 	}

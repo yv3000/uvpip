@@ -21,6 +21,7 @@ pip / pip3 shim or shell function
 | `runner.go` | uv discovery (`UVPIP_UV`, then PATH, then per-user dirs; rejects `ErrDot` and self), `UV_SYSTEM_PYTHON` defaulting, exec with untouched streams, exit codes 126/127. |
 | `doctor.go` | Diagnostic and observability subsystem: unified executable/shim probe engine (`probeTarget`), human-readable inspection (`doctor`), machine-readable JSON health probes (`--health`), and runtime process telemetry (`--metrics`). |
 | `logging.go` | Structured stderr logging: Info failures by default, Debug diagnostics enabled by `UVPIP_DEBUG`; argument values are omitted. |
+| `tools.go` | Dev-time tool dependency declarations (`//go:build tools`); pins build/audit utilities (`actionlint`, `govulncheck`) without linking into the runtime binary. |
 | `bin/` | Repository pip/pip3 shims (`.sh`, `.cmd`). |
 | `installer/`, `uninstaller/` | Per-user install/uninstall for POSIX `sh` and PowerShell; exact marker-block profile edits. |
 | `scripts/` | Isolated dev environment, verifiers, and offline installer test suites. |

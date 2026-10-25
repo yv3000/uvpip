@@ -487,8 +487,9 @@ The CI workflow does not publish binaries. The separate [Release workflow](.gith
 publishes on version-tag pushes or manual dispatch; maintainers must verify the
 source and green native CI before triggering it.
 
-See [SECURITY.md](SECURITY.md) for the trust model and reporting guidance, and
-[CHANGELOG.md](CHANGELOG.md) for release history and migration notes.
+See [SECURITY.md](SECURITY.md) for the trust model and reporting guidance,
+[CHANGELOG.md](CHANGELOG.md) for release history and migration notes, and
+[CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community standards.
 
 ## License
 

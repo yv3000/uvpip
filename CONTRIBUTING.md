@@ -58,7 +58,7 @@ External contributions receive timely, transparent review adhering to the follow
 ## First Contribution Guide: Submitting a PR with Tests
 
 To make your first contribution smooth and reviewable:
-1. **Understand the Architecture**: Review the [Architecture Overview](README.md#architecture) describing the responsibilities of all 22 Go files and the execution flow before proposing or contributing changes.
+1. **Understand the Architecture**: Review the [Architecture Overview](README.md#architecture) describing the responsibilities of all 23 Go files and the execution flow before proposing or contributing changes.
 2. **Choose a focused change**: Pick an isolated bug fix, documentation refinement, or small testable enhancement.
 3. **Follow the Test-Paired Pattern**: Every change to an implementation file (such as `runner.go`, `doctor.go`, or `validate.go`) must be accompanied by updates to its sibling test file (such as `runner_exec_test.go`, `doctor_test.go`, or `validate_schema_test.go`). Use table-driven subtests (`t.Run`) and mock environments where applicable, following the pattern demonstrated in `runner_env_test.go`'s `TestUvCandidatePaths`.
 4. **Run local offline verification**: Ensure offline tests pass with >= 90% statement coverage before opening a PR:

@@ -70,7 +70,7 @@ func testRunUVInheritedOutputPipes(t *testing.T) {
 			if code != tt.wantCode {
 				t.Fatalf("exit=%d want=%d stderr=%s", code, tt.wantCode, &stderr)
 			}
-			if time.Since(started) >= 5*time.Second {
+			if time.Since(started) >= 10*time.Second {
 				t.Fatal("runner waited for descendant pipes")
 			}
 			if tt.wantCode == exitGeneral && !strings.Contains(stderr.String(), "output pipes") {

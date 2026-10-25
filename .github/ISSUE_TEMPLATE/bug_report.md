@@ -6,7 +6,7 @@ labels: ['bug', 'triage']
 assignees: ''
 ---
 
-> Please review our [Contributing Guidelines](CONTRIBUTING.md) before submitting.
+> Please review our [Contributing Guidelines](../../CONTRIBUTING.md) before submitting.
 
 ## Bug Description
 A clear and concise description of the bug.

@@ -43,9 +43,11 @@ func TestFindUV(t *testing.T) {
 	}
 
 	// Verify self-recursion guard
-	t.Setenv("UVPIP_UV", self)
-	if _, err := findUV(); !errors.Is(err, ErrRecursiveExecution) {
-		t.Fatalf("expected ErrRecursiveExecution for self override, got: %v", err)
+	if realSelf, err := os.Executable(); err == nil {
+		t.Setenv("UVPIP_UV", realSelf)
+		if _, err := findUV(); !errors.Is(err, ErrRecursiveExecution) {
+			t.Fatalf("expected ErrRecursiveExecution for self override, got: %v", err)
+		}
 	}
 }
 

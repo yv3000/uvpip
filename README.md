@@ -176,6 +176,8 @@ uvpip uninstall requests
 uvpip list
 uvpip freeze
 uvpip doctor
+uvpip --health
+uvpip --metrics
 ```
 
 After shell integration, substitute `pip` or `pip3` for `uvpip`.
@@ -191,8 +193,9 @@ After shell integration, substitute `pip` or `pip3` for `uvpip`.
   `uv pip install --upgrade <arguments>`, not a standard pip command.
 - `cache <arguments>` becomes `uv cache <arguments>`. Forwarding `cache list`
   does not guarantee your uv version implements it.
-- No arguments, leading `--help`/`-h`, leading `--version`/`-V`, and `doctor` are
-  handled locally. `-v` is forwarded to uv, not treated as wrapper version.
+- No arguments, leading `--help`/`-h`, leading `--version`/`-V`, `doctor`,
+  `--health`, and `--metrics` are handled locally. `-v` is forwarded to uv,
+  not treated as wrapper version.
 - Unknown commands and flags go to uv. Unsupported operations fail with uv's
   error; uvpip never retries with real pip. See uv's
   [pip compatibility documentation](https://docs.astral.sh/uv/pip/compatibility/).
@@ -219,11 +222,11 @@ package installation and does not bound arbitrary blocking caller-supplied I/O.
 
 | Module | Responsibility |
 |---|---|
-| [`main.go`](main.go) | CLI entry point (`main`, `runCLI`); handles native flags (`--version`, `--help`, `doctor`), initializes structured logging, invokes boundary validation, routes translation, and delegates to the process runner. |
+| [`main.go`](main.go) | CLI entry point (`main`, `runCLI`); handles native flags (`--version`, `--help`, `doctor`, `--health`, `--metrics`), initializes structured logging, invokes boundary validation, routes translation, and delegates to the process runner. |
 | [`translator.go`](translator.go) | Argument mapping engine; maps pip subcommands/flags to `uv pip`, validates bundled verbosity flags (`-v`, `-q`), strips confirmation flags (`-y`), and preserves literal arguments after `--`. |
 | [`validate.go`](validate.go) | Input schema validation; enforces boundary limits (`MaxArgCount = 512`, `MaxArgLen = 4096`), blocks embedded null bytes, rejects blank commands, and inspects `UVPIP_UV` override paths. |
 | [`runner.go`](runner.go) | Subprocess supervisor; discovers uv executable path (`findUV`), prepares clean child environments (`buildEnv`), connects I/O streams directly, handles process signals, and bounds pipe draining (`cmd.WaitDelay`). |
-| [`doctor.go`](doctor.go) | Environment diagnostics; verifies PATH resolution for `uv`, `pip`, `pip3`, and `python`, validates installed text shims (`isUvpipShim`), and probes tool versions with timeouts. |
+| [`doctor.go`](doctor.go) | Diagnostic & observability subsystem; coordinates unified executable/shim health probes (`probeTarget`), human-readable inspection (`doctor`), machine-readable JSON health diagnostics (`--health`), and runtime process memory telemetry (`--metrics`). |
 | [`logging.go`](logging.go) | Structured telemetry; initializes `slog.Logger` with `component=uvpip`, supports opt-in diagnostics via `UVPIP_DEBUG`, and protects against credential leakage in logs. |
 | [`errors.go`](errors.go) | Sentinel error taxonomy; defines standardized domain errors (`ErrInvalidArgs`, `ErrUsage`, `ErrNotShim`, `ErrFlagConflict`, `ErrArgBounds`, `ErrUVNotFound`, `ErrCannotExecute`, `ErrRecursiveExecution`). |
 

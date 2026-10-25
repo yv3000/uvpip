@@ -21,7 +21,7 @@ Before opening a pull request, ensure:
 
 ## External Contributions and Review Process
 
-We welcome external contributions, bug reports, and improvements from the community via GitHub Pull Requests.
+We welcome external contributions, bug reports, and improvements from the community via GitHub Pull Requests. All participants are expected to uphold our [Code of Conduct](CODE_OF_CONDUCT.md).
 
 To maintain repository quality, security hygiene, and predictable development cadence, all pull requests undergo structured review against the following criteria:
 

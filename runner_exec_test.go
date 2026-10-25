@@ -127,6 +127,13 @@ func TestExitCode(t *testing.T) {
 	}
 }
 
+func TestExitCode_EdgeCases(t *testing.T) {
+	genErr := errors.New("cannot start process")
+	if code, err := exitCode(genErr); code != 126 || !errors.Is(err, ErrCannotExecute) {
+		t.Fatalf("generic error: %d %v", code, err)
+	}
+}
+
 func TestLookupUV(t *testing.T) {
 	for _, tt := range []struct {
 		name, match string

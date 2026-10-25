@@ -232,3 +232,30 @@ func TestHealthCheckAndMetrics(t *testing.T) {
 		t.Errorf("expected positive goroutines, got %d", parsedMetrics.NumGoroutine)
 	}
 }
+
+func TestRunHealthCheck_Degraded(t *testing.T) {
+	t.Setenv("PATH", t.TempDir())
+	t.Setenv("UVPIP_UV", "")
+	var out bytes.Buffer
+	code := runHealthCheck(&out, quiet)
+	if code != 1 {
+		t.Fatalf("expected code 1 for degraded health, got %d", code)
+	}
+	if !strings.Contains(out.String(), `"status": "degraded"`) {
+		t.Fatalf("expected degraded in output: %s", out.String())
+	}
+}
+
+func TestRunMetrics_Logging(t *testing.T) {
+	var out bytes.Buffer
+	var logBuf bytes.Buffer
+	log := NewLogger(&logBuf, "1")
+	code := runMetrics(&out, log)
+	if code != 0 {
+		t.Fatalf("expected code 0, got %d", code)
+	}
+	if !strings.Contains(logBuf.String(), "telemetry metrics collected") {
+		t.Fatalf("expected telemetry log in debug output: %s", logBuf.String())
+	}
+}
+

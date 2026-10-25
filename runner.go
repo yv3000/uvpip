@@ -33,19 +33,11 @@ func runUV(args []string, stdin io.Reader, stdout, stderr io.Writer, log *slog.L
 
 // runUVContext executes uv with the given context for clean cancellation on interrupts.
 func runUVContext(ctx context.Context, args []string, stdin io.Reader, stdout, stderr io.Writer, log *slog.Logger) int {
-	// ValidateInputs validates command arguments and environment overrides before subprocess execution
+	// ValidateInputs validates command arguments before subprocess execution
 	if len(args) > 0 {
-		if err := ValidateInputs(CLIInputs{Args: args, UVOverride: os.Getenv("UVPIP_UV")}); err != nil {
+		if err := ValidateInputs(CLIInputs{Args: args}); err != nil && !errors.Is(err, ErrEmptyCommand) {
 			if log != nil {
 				log.Info("runner input validation rejected", "component", "uvpip", "error", err)
-			}
-			fmt.Fprintf(stderr, "[uvpip] %v; run uvpip --help for usage\n", err)
-			return exitUsage
-		}
-	} else if override := os.Getenv("UVPIP_UV"); override != "" {
-		if err := ValidateInputs(CLIInputs{UVOverride: override}); err != nil {
-			if log != nil {
-				log.Info("runner override validation rejected", "component", "uvpip", "error", err)
 			}
 			fmt.Fprintf(stderr, "[uvpip] %v; run uvpip --help for usage\n", err)
 			return exitUsage

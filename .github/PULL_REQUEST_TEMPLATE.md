@@ -1,3 +1,5 @@
+> Please review our [Contributing Guidelines](CONTRIBUTING.md) before submitting. All pull requests must pass the CI suite and maintain zero runtime dependencies.
+
 ## Description
 A concise description of the changes introduced by this pull request.
 

@@ -18,6 +18,14 @@ func runDoctor(out io.Writer, log *slog.Logger) int {
 	if log != nil {
 		log.Debug("doctor started", "component", "uvpip")
 	}
+	// Explicitly validate environment override boundaries at doctor entry point
+	if err := ValidateInputs(CLIInputs{UVOverride: os.Getenv("UVPIP_UV")}); err != nil {
+		if log != nil {
+			log.Info("doctor input validation failed", "component", "uvpip", "error", err)
+		}
+		fmt.Fprintf(out, "[!!] uv override invalid: %v\n", err)
+		return 1
+	}
 	fmt.Fprintln(out, "uvpip doctor (PATH executables; shell functions are not visible)")
 	code := 0
 	for _, name := range []string{"uv", "pip", "pip3", "python"} {

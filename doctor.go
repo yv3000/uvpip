@@ -19,7 +19,7 @@ func runDoctor(out io.Writer, log *slog.Logger) int {
 		log.Debug("doctor started", "component", "uvpip")
 	}
 	// Explicitly validate environment override boundaries at doctor entry point
-	if err := ValidateInputs(CLIInputs{UVOverride: os.Getenv("UVPIP_UV")}); err != nil {
+	if err := ValidateInputs(CLIInputs{Args: []string{"doctor"}, UVOverride: os.Getenv("UVPIP_UV")}); err != nil {
 		if log != nil {
 			log.Info("doctor input validation failed", "component", "uvpip", "error", err)
 		}

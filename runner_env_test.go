@@ -41,6 +41,12 @@ func TestFindUV(t *testing.T) {
 	if got, err := findUV(); err != nil || got != path {
 		t.Fatalf("PATH lookup: %q %v", got, err)
 	}
+
+	// Verify self-recursion guard
+	t.Setenv("UVPIP_UV", self)
+	if _, err := findUV(); !errors.Is(err, ErrRecursiveExecution) {
+		t.Fatalf("expected ErrRecursiveExecution for self override, got: %v", err)
+	}
 }
 
 func TestUvCandidatePaths(t *testing.T) {

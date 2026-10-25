@@ -23,6 +23,25 @@ func runCLI(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return 0
 	}
 
+	// Handle top-level informational flags first
+	if args[0] == "--version" || args[0] == "-V" {
+		fmt.Fprintf(stdout, "uvpip v%s (uv-powered pip wrapper)\n", version)
+		return 0
+	}
+	if args[0] == "--help" || args[0] == "-h" {
+		printUsage(stdout)
+		return 0
+	}
+
+	// ValidateInputs centrally validates CLI arguments and environment boundaries
+	if err := ValidateInputs(CLIInputs{Args: args, UVOverride: os.Getenv("UVPIP_UV")}); err != nil {
+		if log != nil {
+			log.Info("CLI input validation failed", "component", "uvpip", "error", err)
+		}
+		fmt.Fprintf(stderr, "[uvpip] %v; run uvpip --help for usage\n", err)
+		return 2
+	}
+
 	// Handle uvpip-native commands
 	switch args[0] {
 	case "doctor":
@@ -31,19 +50,8 @@ func runCLI(args []string, stdin io.Reader, stdout, stderr io.Writer) int {
 		return runHealthCheck(stdout, log)
 	case "--metrics", "metrics":
 		return runMetrics(stdout, log)
-	case "--version", "-V":
-		fmt.Fprintf(stdout, "uvpip v%s (uv-powered pip wrapper)\n", version)
-		return 0
-	case "--help", "-h":
-		printUsage(stdout)
-		return 0
 	}
 
-	// All other args: validate against canonical schema, translate pip → uv, and run
-	if err := CanonicalValidationSchema.ValidateWithLogger(args, log); err != nil {
-		fmt.Fprintf(stderr, "[uvpip] %v; run uvpip --help for usage\n", err)
-		return 2
-	}
 	uvArgs := translateToUV(args)
 	// Log only the routed uv command and count; argument values may hold credentials.
 	log.Debug("translated command", "uv_command", uvArgs[0], "arg_count", len(uvArgs))

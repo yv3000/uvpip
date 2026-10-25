@@ -6,7 +6,7 @@ labels: ['enhancement', 'good first issue']
 assignees: ''
 ---
 
-> Please review our [Contributing Guidelines](CONTRIBUTING.md) before submitting.
+> Please review our [Contributing Guidelines](../../CONTRIBUTING.md) before submitting.
 
 ## Feature Summary
 A concise description of the suggested enhancement or pip compatibility mapping.
@@ -19,5 +19,5 @@ Why is this enhancement needed? What pip command or workflow does it support?
 - Pairs code changes directly with tests in the same PR.
 
 ## Checklist
-- [ ] Reviewed [ARCHITECTURE.md](ARCHITECTURE.md) and [CONTRIBUTING.md](CONTRIBUTING.md)
+- [ ] Reviewed [ARCHITECTURE.md](../../ARCHITECTURE.md) and [CONTRIBUTING.md](../../CONTRIBUTING.md)
 - [ ] Preserves zero third-party Go runtime dependencies

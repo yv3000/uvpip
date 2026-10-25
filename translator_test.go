@@ -36,6 +36,11 @@ func TestValidateTranslationFlags(t *testing.T) {
 		{"attached requirement option with q and v in filename", []string{"install", "-rrequirements-dev.txt"}, false},
 		{"attached constraint option with q and v in filename", []string{"install", "-cconstraints-quick-view.txt"}, false},
 		{"attached editable option with q and v in path", []string{"install", "-e./pkg-quick-view"}, false},
+		{"attached find-links option with q and v", []string{"install", "-fhttps://repo.org/q-and-v"}, false},
+		{"attached trusted-host option with q and v", []string{"install", "-thost-with-q-v"}, false},
+		{"attached build-dir option with q and v", []string{"install", "-bbuild-dir-qv"}, false},
+		{"attached extra-index option with q and v", []string{"install", "-iextra-qv"}, false},
+		{"non-alpha short option with digits", []string{"install", "-1", "-2"}, false},
 	} {
 		t.Run(tt.name, func(t *testing.T) {
 			err := validateTranslationFlags(tt.args)

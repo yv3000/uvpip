@@ -19,7 +19,7 @@ pip / pip3 shim or shell function
 | `validate.go` | Boundary schema checks for CLI args (count, length, null bytes) and the `UVPIP_UV` override. Never echoes values. |
 | `translator.go` | Validates quiet/verbose conflicts before forwarding; converts pip argv to uv argv. `uninstall -y` stripping, `upgrade` alias, `cache`; respects `--`. |
 | `runner.go` | uv discovery (`UVPIP_UV`, then PATH, then per-user dirs; rejects `ErrDot` and self), `UV_SYSTEM_PYTHON` defaulting, exec with untouched streams, exit codes 126/127. |
-| `doctor.go` | `uvpip doctor`: probes uv/python versions and recognizes shipped pip shims. |
+| `doctor.go` | Diagnostic and observability subsystem: unified executable/shim probe engine (`probeTarget`), human-readable inspection (`doctor`), machine-readable JSON health probes (`--health`), and runtime process telemetry (`--metrics`). |
 | `logging.go` | Structured stderr logging: Info failures by default, Debug diagnostics enabled by `UVPIP_DEBUG`; argument values are omitted. |
 | `bin/` | Repository pip/pip3 shims (`.sh`, `.cmd`). |
 | `installer/`, `uninstaller/` | Per-user install/uninstall for POSIX `sh` and PowerShell; exact marker-block profile edits. |
@@ -52,6 +52,15 @@ successfully but descendants retain those pipes beyond the bound, uvpip reports
 the drain failure and returns 1. Nonzero child exit codes are preserved. This does not
 terminate a whole process tree or bound a caller's blocked custom writer.
 Doctor probes use their own five-second context timeout and one-second drain bound.
+
+## Diagnostic & Observability Subsystem
+
+`uvpip` runs across diverse automation contexts: interactive user shells, headless CI/CD runner matrices, container build layers, and developer environments. Parsing human terminal text in automation is fragile; the diagnostic subsystem (`doctor.go`) provides unified, machine-readable observability:
+
+1. **Unified Probe Engine (`probeTarget`)**: Single internal probe abstraction that inspects `uv`, `pip`, `pip3`, and `python` binaries, verifies `uvpip` text shims (`isUvpipShim`), and probes versions within a strict 5-second context timeout and 1-second output-drain bound (`WaitDelay`).
+2. **Interactive Terminal Doctor (`uvpip doctor`)**: Human-oriented diagnostics printing verified PATH resolution or actionable guidance with exit status 0 (all ok) or 1 (failures detected).
+3. **Structured Health Diagnostics (`uvpip --health`)**: Emits RFC3339-timestamped JSON (`HealthStatus` with individual `HealthProbe` outcomes) with exit 0 (healthy) or 1 (degraded) for container readiness probes and automated pre-flight gates.
+4. **Runtime Process Telemetry (`uvpip --metrics`)**: Emits structured JSON (`MetricsData`) exposing Go runtime memory stats (heap allocations, sys bytes, total allocs) and goroutine counts to verify the zero-dependency CLI's lightweight operational footprint without third-party monitoring agents.
 
 ## Tests
 

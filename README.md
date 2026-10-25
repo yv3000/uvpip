@@ -216,7 +216,7 @@ package installation and does not bound arbitrary blocking caller-supplied I/O.
 
 ### Architecture
 
-`uvpip` is architected as a lean, self-contained CLI wrapper built entirely upon the Go standard library, with **zero external runtime dependencies**. The codebase comprises 22 focused Go files (7 core implementation modules and 15 dedicated verification test suites):
+`uvpip` is architected as a lean, self-contained CLI wrapper built entirely upon the Go standard library, with **zero external runtime dependencies**. The codebase comprises 23 focused Go files (8 core and build tool modules and 15 dedicated verification test suites):
 
 #### Module Responsibilities
 
@@ -229,6 +229,7 @@ package installation and does not bound arbitrary blocking caller-supplied I/O.
 | [`doctor.go`](doctor.go) | Diagnostic & observability subsystem; coordinates unified executable/shim health probes (`probeTarget`), human-readable inspection (`doctor`), machine-readable JSON health diagnostics (`--health`), and runtime process memory telemetry (`--metrics`). |
 | [`logging.go`](logging.go) | Structured telemetry; initializes `slog.Logger` with `component=uvpip`, supports opt-in diagnostics via `UVPIP_DEBUG`, and protects against credential leakage in logs. |
 | [`errors.go`](errors.go) | Sentinel error taxonomy; defines standardized domain errors (`ErrInvalidArgs`, `ErrUsage`, `ErrNotShim`, `ErrFlagConflict`, `ErrArgBounds`, `ErrUVNotFound`, `ErrCannotExecute`, `ErrRecursiveExecution`). |
+| [`tools.go`](tools.go) | Dev-time tool dependency declarations (`//go:build tools`); pins build/audit utilities (`actionlint`, `govulncheck`) without linking into the runtime binary. |
 
 #### Logging Architecture
 

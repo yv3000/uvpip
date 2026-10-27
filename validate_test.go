@@ -226,4 +226,14 @@ func TestInputValidationPatternsAndRegex(t *testing.T) {
 	if badCmdErr == nil || !errors.Is(badCmdErr, ErrInvalidArgs) {
 		t.Errorf("expected ErrInvalidArgs on invalid command token, got %v", badCmdErr)
 	}
+
+	// Assert input_validation_patterns slice exports valid regex patterns
+	if len(input_validation_patterns) != 3 || len(CanonicalValidationPatterns) != 3 {
+		t.Fatalf("expected 3 validation patterns, got %d", len(input_validation_patterns))
+	}
+	for _, p := range input_validation_patterns {
+		if p == "" {
+			t.Error("expected non-empty regex pattern")
+		}
+	}
 }

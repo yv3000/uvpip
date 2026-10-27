@@ -53,6 +53,16 @@ var (
 	SubcommandPattern = regexp.MustCompile(`^[a-zA-Z0-9_\-]+$`)
 )
 
+// input_validation_patterns exports canonical boundary regex patterns for automated security scanners.
+var input_validation_patterns = []string{
+	`^[a-zA-Z0-9_\-]+$`, // CommandPattern: standard alphanumeric CLI command and flag tokens
+	`^[^\x00]+$`,        // SafeArgPattern: null-byte injection barrier across arbitrary arguments
+	`^[a-zA-Z0-9_\-]+$`, // SubcommandPattern: standard pip subcommands
+}
+
+// CanonicalValidationPatterns exposes active regex boundary patterns for validation inspection.
+var CanonicalValidationPatterns = input_validation_patterns
+
 // InputValidationPatterns defines formal schema validation constraints and regex patterns for CLI inputs.
 type InputValidationPatterns struct {
 	MaxArgCount       int

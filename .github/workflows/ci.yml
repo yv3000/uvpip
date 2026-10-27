@@ -169,10 +169,19 @@ jobs:
         run: |
           go tool cover -func=coverage.out > coverage.txt
           cat coverage.txt
+          summary_line=$(go tool cover -func=coverage.out | tail -1)
+          echo "Coverage summary: $summary_line"
+          total=$(echo "$summary_line" | awk '{print $NF}' | tr -d '%')
+          echo "Total statement coverage: ${total}% (threshold: ${COVERAGE_THRESHOLD}%)"
+          awk -v total="$total" -v min="$COVERAGE_THRESHOLD" 'BEGIN {
+            if (total !~ /^[0-9]+([.][0-9]+)?$/ || total + 0 < min + 0) {
+              printf "Coverage %s%% is missing, invalid or below threshold %s%%\n", total, min > "/dev/stderr"
+              exit 1
+            }
+          }'
           sh scripts/check-coverage.sh coverage.txt "$COVERAGE_THRESHOLD"
           if [ -n "$GITHUB_STEP_SUMMARY" ]; then
-            total=$(awk '$1 == "total:" { sub("%", "", $3); print $3 }' coverage.txt)
-            printf '### Coverage Gate\n- Total Statement Coverage: **%s%%** (Required: >= %s%%)\n' "$total" "$COVERAGE_THRESHOLD" >> "$GITHUB_STEP_SUMMARY"
+            printf '### Coverage Summary\n- Total Statement Coverage: **%s%%** (Enforced Threshold: >= %s%%)\n' "$total" "$COVERAGE_THRESHOLD" >> "$GITHUB_STEP_SUMMARY"
           fi
 
       - name: Upload coverage profile and summary

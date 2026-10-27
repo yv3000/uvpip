@@ -97,6 +97,14 @@ class TestCLITranslation(unittest.TestCase):
         main()
         self.assertEqual(mock_call.call_args[0][0], ["/opt/uv/bin/uv", "pip", "freeze"])
 
+    def test_input_validation_patterns_exported(self):
+        """Assert input_validation_patterns list is exported and non-empty."""
+        from uvpip import input_validation_patterns
+        self.assertIsInstance(input_validation_patterns, list)
+        self.assertGreaterEqual(len(input_validation_patterns), 2)
+        for pattern in input_validation_patterns:
+            self.assertTrue(pattern.startswith("^") and pattern.endswith("$"))
+
 
 if __name__ == "__main__":
     unittest.main()

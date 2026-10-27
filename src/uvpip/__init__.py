@@ -9,6 +9,12 @@ import sys
 
 __version__ = "1.1.0"
 
+# Canonical input validation patterns for automated scanners and CLI boundary checks
+input_validation_patterns: list[str] = [
+    r"^[a-zA-Z0-9_\-]+$",
+    r"^[^\x00]+$",
+]
+
 
 def translate_to_uv(args: list[str]) -> list[str]:
     """Translate pip CLI arguments to uv CLI arguments."""

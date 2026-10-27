@@ -489,6 +489,7 @@ publishes on version-tag pushes or manual dispatch; maintainers must verify the
 source and green native CI before triggering it.
 
 See [SECURITY.md](SECURITY.md) for the trust model and reporting guidance,
+[EVALUATION_RETROSPECTIVE.md](EVALUATION_RETROSPECTIVE.md) for the 10-report diagnostic history, anti-patterns, and quality invariants,
 [CHANGELOG.md](CHANGELOG.md) for release history and migration notes, and
 [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) for community standards.
 

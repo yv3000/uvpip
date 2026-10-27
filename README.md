@@ -235,7 +235,7 @@ package installation and does not bound arbitrary blocking caller-supplied I/O.
 
 Structured telemetry throughout `uvpip` is implemented using Go's standard library `log/slog` framework. All entry points (`main.go`, `runner.go`, `doctor.go`, `validate.go`) initialize or consume `*slog.Logger` with `component=uvpip`. By default, logging operates at `slog.LevelInfo` to record critical execution failures to `stderr` without polluting standard CLI output. When `UVPIP_DEBUG=1` is provided, the handler switches to `slog.LevelDebug` for full process telemetry. All sensitive parameters (package URLs with basic auth, token headers, user arguments) are strictly redacted to prevent credential exposure.
 
-#### Verification Test Suites (16 Specs)
+#### Verification Test Suites (17 Specs)
 
 | Test Suite | Coverage Domain |
 |---|---|
@@ -251,6 +251,7 @@ Structured telemetry throughout `uvpip` is implemented using Go's standard libra
 | [`logging_test.go`](logging_test.go) | Structured logging levels, key-value attributes, and sensitive token redaction. |
 | [`errors_test.go`](errors_test.go) | Sentinel error taxonomy assertions and `errors.Is`/`As` hierarchy unwrapping. |
 | [`integration_test.go`](integration_test.go) | End-to-end command execution, stream pass-through, and mock uv interactions. |
+| [`installer_integration_test.go`](installer_integration_test.go) | POSIX offline installer/uninstaller execution, staging isolation, and network refusal assertion under `go test`. |
 | [`windows_test.go`](windows_test.go) | Windows-specific `.cmd` shim parsing, case-insensitive PATH lookup, and stream redirection. |
 | [`coverage_gate_test.go`](coverage_gate_test.go) | Coverage threshold parsing verification and deterministic sub-90% coverage gate failure assertions. |
 | [`fuzz_test.go`](fuzz_test.go) | Continuous fuzzing campaigns for argument boundaries, translation invariants, and overrides. |

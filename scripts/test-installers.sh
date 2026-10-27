@@ -237,5 +237,27 @@ UVPIP_NO_PROFILE=1 install
 uninstall
 export UVPIP_BINARY="$WORK/fixture"
 
+# Threat-model verification: assert installer succeeds completely offline with no network calls
+mkdir -p "$WORK/threat-test" "$WORK/no-network-bin"
+cat > "$WORK/no-network-bin/curl" <<'MOCK'
+#!/bin/sh
+printf '%s\n' 'FATAL: curl network call attempted in offline mode' >&2
+exit 99
+MOCK
+cat > "$WORK/no-network-bin/wget" <<'MOCK'
+#!/bin/sh
+printf '%s\n' 'FATAL: wget network call attempted in offline mode' >&2
+exit 99
+MOCK
+chmod +x "$WORK/no-network-bin/curl" "$WORK/no-network-bin/wget"
+THREAT_OLD_PATH="$PATH"
+export PATH="$WORK/no-network-bin:$PATH"
+export UVPIP_BINARY="$WORK/fixture" UVPIP_NO_PROFILE=1
+install
+[ -x "$HOME/.uvpip/bin/uvpip" ] || fail 'threat-model offline install failed'
+uninstall
+export PATH="$THREAT_OLD_PATH"
+printf '%s\n' 'offline install verified: no network calls'
+
 no_stage
 printf '%s\n' 'PASS: offline POSIX installer/uninstaller tests'

@@ -78,6 +78,11 @@ jobs:
       - name: Lint shell scripts (shellcheck)
         run: shellcheck installer/*.sh uninstaller/*.sh scripts/*.sh bin/*.sh
 
+      - name: Offline installer verification (threat-model assertion)
+        run: |
+          mkdir -p "$RUNNER_TEMP/uvpip-threat-tests" "$RUNNER_TEMP/uvpip-threat-cache"
+          sh scripts/test-installers.sh "$RUNNER_TEMP/uvpip-threat-tests" "$RUNNER_TEMP/uvpip-threat-cache"
+
       - name: Parse PowerShell scripts
         shell: pwsh
         run: ./scripts/check-powershell.ps1
@@ -160,10 +165,15 @@ jobs:
       - name: Run tests (go test with coverage)
         run: go test -count=1 ${{ matrix.race }} -covermode=atomic -coverprofile=coverage.out ./...
 
-      - name: Coverage report
+      - name: Coverage report and hard threshold gate (>= 90%)
         run: |
           go tool cover -func=coverage.out > coverage.txt
           cat coverage.txt
+          sh scripts/check-coverage.sh coverage.txt "$COVERAGE_THRESHOLD"
+          if [ -n "$GITHUB_STEP_SUMMARY" ]; then
+            total=$(awk '$1 == "total:" { sub("%", "", $3); print $3 }' coverage.txt)
+            printf '### Coverage Gate\n- Total Statement Coverage: **%s%%** (Required: >= %s%%)\n' "$total" "$COVERAGE_THRESHOLD" >> "$GITHUB_STEP_SUMMARY"
+          fi
 
       - name: Upload coverage profile and summary
         if: always()
@@ -175,16 +185,6 @@ jobs:
             coverage.txt
           if-no-files-found: error
           retention-days: 14
-
-      - name: Enforce coverage threshold
-        env:
-          COVERAGE_THRESHOLD: 90
-        run: |
-          sh scripts/check-coverage.sh coverage.txt "$COVERAGE_THRESHOLD"
-          if [ -n "$GITHUB_STEP_SUMMARY" ]; then
-            total=$(awk '$1 == "total:" { sub("%", "", $3); print $3 }' coverage.txt)
-            printf '### Coverage Summary\n- Total Statement Coverage: **%s%%**\n' "$total" >> "$GITHUB_STEP_SUMMARY"
-          fi
 
       - name: Verify README coverage badge matches statement coverage
         if: matrix.os == 'ubuntu-24.04'

@@ -41,6 +41,7 @@ To maintain repository quality, security hygiene, and predictable development ca
 - fmt.Println("failed to find component:", err)
 + log.Info("component resolution failed", "component", "uvpip", "target", target, "error", err)
 ```
+8. **Quality Invariants & Evaluation History**: Review [EVALUATION_RETROSPECTIVE.md](EVALUATION_RETROSPECTIVE.md) for past failure modes, root causes, and strict anti-patterns (e.g., zero Docker/containers, zero third-party runtime dependencies, quoted YAML triggers, and offline installer network refusal).
 
 ### Review SLAs and Turnaround Expectations
 

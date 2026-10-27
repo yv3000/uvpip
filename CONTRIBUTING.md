@@ -25,7 +25,28 @@ We welcome external contributions, bug reports, and improvements from the commun
 
 To maintain repository quality, security hygiene, and predictable development cadence, all pull requests undergo structured review against the following criteria:
 
-1. **Focused Commit Pairing**: Land changes as small, separately reviewable commits. Every commit introducing or modifying behavior must pair the source code change with its corresponding test file update (e.g., `validate.go` + `validate_test.go` or `runner.go` + `runner_exec_test.go` / `runner_env_test.go`). Avoid bulk commits that mix formatting, refactoring, and features.
+1. **Focused Commit Pairing**: Land changes as small, separately reviewable commits. Every commit introducing or modifying behavior must pair the source code change with its corresponding test file update (e.g., `validate.go` + `validate_test.go` or `runner.go` + `runner_exec_test.go` / `runner_env_test.go`). Avoid bulk commits that mix formatting, refactoring, and features. For example, a single atomic commit must pair the behavior change with its sibling test assertion:
+
+```diff
+diff --git a/validate.go b/validate.go
+--- a/validate.go
++++ b/validate.go
+@@ -55,2 +55,3 @@ func ValidateArgs(args []string) error {
++	if len(args) > maxArgCount {
++		return fmt.Errorf("%w: argument count %d exceeds maximum %d", errUsage, len(args), maxArgCount)
++	}
+diff --git a/validate_schema_test.go b/validate_schema_test.go
+--- a/validate_schema_test.go
++++ b/validate_schema_test.go
+@@ -40,3 +40,8 @@ func TestValidateArgBounds(t *testing.T) {
++	t.Run("rejects_excess_args", func(t *testing.T) {
++		excess := make([]string, maxArgCount+1)
++		if err := ValidateArgs(excess); err == nil {
++			t.Fatal("expected error for excessive arguments, got nil")
++		}
++	})
+```
+
 2. **Standard Library First**: Adhere to YAGNI and minimalist principles. `uvpip` carries zero third-party Go runtime dependencies. Do not introduce runtime dependencies or speculative abstractions.
 3. **Automated CI Gates**: Every pull request must pass the full multi-platform matrix in GitHub Actions:
    - Ubuntu 24.04, macOS 14, and Windows Server 2022.

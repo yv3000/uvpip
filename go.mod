@@ -20,11 +20,11 @@ require (
 	github.com/rhysd/actionlint v1.7.7 // tool binary implementation
 	github.com/rivo/uniseg v0.4.7 // indirect; transitive of actionlint (unicode segmentation)
 	github.com/robfig/cron/v3 v3.0.1 // indirect; transitive of actionlint (cron expression parser per go mod why)
-	golang.org/x/mod v0.41.0 // indirect; transitive of govulncheck/actionlint
-	golang.org/x/sync v0.23.0 // indirect; transitive of govulncheck (errgroup)
-	golang.org/x/sys v0.48.0 // indirect; transitive of actionlint/govulncheck
-	golang.org/x/telemetry v0.0.0-20260908163034-4bcc4b2ee518 // indirect; transitive of govulncheck
-	golang.org/x/tools v0.50.0 // indirect; transitive of govulncheck
-	golang.org/x/vuln v1.8.0 // tool binary implementation
+	golang.org/x/mod v0.42.0 // indirect; transitive of govulncheck/actionlint
+	golang.org/x/sync v0.24.0 // indirect; transitive of govulncheck (errgroup)
+	golang.org/x/sys v0.49.0 // indirect; transitive of actionlint/govulncheck
+	golang.org/x/telemetry v0.0.0-20261010193011-f71dc92da45e // indirect; transitive of govulncheck
+	golang.org/x/tools v0.52.0 // indirect; transitive of govulncheck
+	golang.org/x/vuln v1.9.0 // tool binary implementation
 	gopkg.in/yaml.v3 v3.0.1 // indirect; transitive of actionlint (yaml parser)
 )

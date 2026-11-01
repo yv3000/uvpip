@@ -35,7 +35,7 @@ dependencies = []
 [project.optional-dependencies]
 dev = [
     "coverage==7.6.10",
-    "pip-audit==2.7.3",
+    "pip-audit==2.10.1",
 ]
 
 [project.urls]

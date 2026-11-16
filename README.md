@@ -11,7 +11,6 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
 [![Python 3.8+](https://img.shields.io/badge/Python-%3E%3D3.8-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
 [![Go 1.26+](https://img.shields.io/badge/Go-%3E%3D1.26-00ADD8?style=flat-square&logo=go&logoColor=white)](go.mod)
-[![webinstall.dev](https://img.shields.io/badge/webi-uvpip-blueviolet?style=flat-square)](https://webinstall.dev/uvpip)
 
 <br/>
 
@@ -110,25 +109,7 @@ real    0m 0.894s   🚀 (~32x faster!)
 
 Choose the fastest method for your system:
 
-> ### ⚡ **Option 1: Single-Line Install via Webinstall (Fastest & Zero Sudo)**
-> Installs the standalone native binary to `~/.local/bin/` with automatic `PATH` setup.  
-> **No Python, Go compiler, or root permissions needed.**
->
-> **Linux & macOS:**
-> ```bash
-> curl -sS https://webi.sh/uvpip | bash
-> ```
->
-> **Windows (PowerShell):**
-> ```powershell
-> powershell -c "irm https://webi.sh/uvpip | iex"
-> # or
-> curl.exe https://webi.sh/uvpip | powershell
-> ```
-
----
-
-> ### 🐍 **Option 2: Install via PyPI (For Python Developers)**
+> ### 🐍 **Option 1: Install via PyPI (For Python Developers)**
 > Officially registered on PyPI as **`uvpip-cli`**.
 >
 > **Standard pip:**
@@ -148,7 +129,7 @@ Choose the fastest method for your system:
 
 ---
 
-> ### 📦 **Option 3: Pre-compiled Standalone Native Binaries**
+> ### 📦 **Option 2: Pre-compiled Standalone Native Binaries**
 > Direct single-executable downloads from **[GitHub Releases](https://github.com/yv3000/uvpip/releases)**:
 >
 > | OS / Platform | Architecture | Download Asset |
@@ -159,7 +140,7 @@ Choose the fastest method for your system:
 
 ---
 
-> ### 🔨 **Option 4: Build from Source**
+> ### 🔨 **Option 3: Build from Source**
 > Requires Go 1.26+:
 > ```bash
 > git clone https://github.com/yv3000/uvpip.git
@@ -236,15 +217,6 @@ To remove `uvpip` and restore default shell shims cleanly:
   ```bash
   sh uninstaller/uninstall.sh
   ```
-
----
-
-> [!NOTE]
-> **Looking for the Node.js / JavaScript equivalent?**  
-> Check out **[`bunpm`](https://github.com/yv3000/bunpm)** — our companion tool that transparently routes `npm`, `yarn`, and `pnpm` through Bun for 20x faster package installs:
-> ```bash
-> npm install -g bunpm-cli
-> ```
 
 ---
 

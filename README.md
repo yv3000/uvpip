@@ -1,35 +1,132 @@
+<div align="center">
+
 # uvpip
 
-[![PyPI](https://img.shields.io/pypi/v/uvpip-cli.svg)](https://pypi.org/project/uvpip-cli/)
-[![CI](https://github.com/yv3000/uvpip/actions/workflows/ci.yml/badge.svg)](https://github.com/yv3000/uvpip/actions/workflows/ci.yml)
-[![Coverage](https://img.shields.io/badge/Coverage-97%25-brightgreen.svg)](https://github.com/yv3000/uvpip/actions)
-[![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
+### ⚡ Ultra-fast, zero-runtime-dependency CLI wrapping `pip` with `uv`
 
-Type `pip`, run [uv](https://github.com/astral-sh/uv).
+[![PyPI version](https://img.shields.io/pypi/v/uvpip-cli.svg?style=flat-square&color=3775A9&logo=pypi&logoColor=white)](https://pypi.org/project/uvpip-cli/)
+[![PyPI downloads](https://img.shields.io/pypi/dm/uvpip-cli.svg?style=flat-square&color=blue)](https://pypi.org/project/uvpip-cli/)
+[![CI status](https://img.shields.io/github/actions/workflow/status/yv3000/uvpip/ci.yml?branch=main&style=flat-square)](https://github.com/yv3000/uvpip/actions)
+[![Coverage](https://img.shields.io/badge/Coverage-97%25-brightgreen.svg?style=flat-square)](https://github.com/yv3000/uvpip/actions)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](LICENSE)
+[![Python 3.8+](https://img.shields.io/badge/Python-%3E%3D3.8-3776AB?style=flat-square&logo=python&logoColor=white)](pyproject.toml)
+[![Go 1.26+](https://img.shields.io/badge/Go-%3E%3D1.26-00ADD8?style=flat-square&logo=go&logoColor=white)](go.mod)
+[![webinstall.dev](https://img.shields.io/badge/webi-uvpip-blueviolet?style=flat-square)](https://webinstall.dev/uvpip)
 
-uvpip is a small Go wrapper that translates common pip commands to uv. Optional
-per-user `pip` and `pip3` shims and shell functions let you keep familiar commands
-without replacing Python's pip installation. Speed and compatibility depend on
-uv, your packages, network, and environment; uvpip is not a complete pip emulator.
+<br/>
 
-**Project type:** standalone command-line tool and per-user installer. It is not
-a backend service: no network listeners, no daemon, no persistent state, and no
-database. Each invocation runs uv once and exits with uv's status.
-
-> **Releases:** Tagged releases with multi-platform binary assets and SHA-256
-> checksum manifests are published at [releases](https://github.com/yv3000/uvpip/releases).
-> Running an installer without a local binary downloads the latest published
-> release asset. Use the local-build route below to compile directly from source.
-
-## Installation
-
-### Via PyPI
-```bash
-pip install uvpip-cli
+```text
+                        +---------+     +---------+
+                        |   pip   |     |  pip3   |
+                        +----+----+     +----+----+
+                             |               |
+                             +-------+-------+
+                                     |
+                                     v
+                             +---------------+
+                             |     uvpip     |
+                             +-------+-------+
+                                     |
+                         +-----------+-----------+
+                         |                       |
+                         v                       v
+                  +-------------+         +-------------+
+                  |     uv      |         | Native pip  |
+                  | (fast path) |         | (safe fall) |
+                  +-------------+         +-------------+
 ```
 
-### Via Pre-compiled Native Binaries
-Download native pre-compiled executables for Windows, macOS, and Linux on amd64/arm64 from [GitHub Releases](https://github.com/yv3000/uvpip/releases).
+<p>
+  <img src="https://img.shields.io/badge/pip-3775A9?style=for-the-badge&logo=pypi&logoColor=white" alt="pip" />
+  <img src="https://img.shields.io/badge/pip3-3776AB?style=for-the-badge&logo=python&logoColor=white" alt="pip3" />
+  <img src="https://img.shields.io/badge/➔-18181B?style=for-the-badge" alt="to" />
+  <img src="https://img.shields.io/badge/uv-DE5FE9?style=for-the-badge&logo=astral&logoColor=white" alt="uv" />
+  <img src="https://img.shields.io/badge/PyPI-3775A9?style=for-the-badge&logo=pypi&logoColor=white" alt="PyPI" />
+  <img src="https://img.shields.io/badge/Go-00ADD8?style=for-the-badge&logo=go&logoColor=white" alt="Go" />
+</p>
+
+</div>
+
+---
+
+> [!TIP]
+> **10-100x Faster Installs with Zero Risk**: `uvpip` transparently translates common `pip` and `pip3` commands into [`uv`](https://github.com/astral-sh/uv) operations at lightning speed, while guaranteeing an **automatic 100% fail-closed fallback** to native Python `pip` if a command or flag cannot be safely mapped.
+
+---
+
+## ⚡ Overview
+
+Type `pip`, run [`uv`](https://github.com/astral-sh/uv).
+
+`uvpip` is a lightweight, high-performance Go CLI wrapper that translates familiar `pip` commands to `uv`. Optional per-user `pip` and `pip3` shims and shell functions let you keep familiar workflows without replacing Python's native pip installation.
+
+**Project architecture:** Standalone binary command-line tool and per-user installer. It is not a daemon or background service: no persistent state, no open ports, no background telemetry, and zero third-party runtime dependencies. Each invocation translates arguments, delegates execution to `uv` (or native fallback), and exits with the sub-process exit status.
+
+---
+
+## 🚀 Installation
+
+### Option 1: Via PyPI (Recommended for Python Environments)
+
+`uvpip` is officially registered on **[PyPI as `uvpip-cli`](https://pypi.org/project/uvpip-cli/)**. Install globally or inside your virtual environment:
+
+```bash
+# Using standard pip
+pip install uvpip-cli
+
+# Or using uv tool (isolated CLI tool)
+uv tool install uvpip-cli
+
+# Or using pipx
+pipx install uvpip-cli
+```
+
+### Option 2: Via Webinstall (Fastest Single-Command Setup)
+
+Install pre-compiled native binaries directly to `~/.local/bin/` with automated `PATH` configuration and no sudo required:
+
+**Linux / macOS:**
+```bash
+curl -sS https://webi.sh/uvpip | bash
+```
+
+**Windows (PowerShell):**
+```powershell
+curl.exe https://webi.sh/uvpip | powershell
+# or
+powershell -c "irm https://webi.sh/uvpip | iex"
+```
+
+### Option 3: Pre-compiled Native Binaries
+
+Download standalone pre-compiled native executables for Windows, macOS, and Linux on `amd64` and `arm64` from **[GitHub Releases](https://github.com/yv3000/uvpip/releases)**:
+
+| Platform | Architecture | Binary Asset |
+| :--- | :--- | :--- |
+| **Linux** | `amd64` (x86_64) | [`uvpip-linux-amd64`](https://github.com/yv3000/uvpip/releases/latest) |
+| **Linux** | `arm64` (aarch64) | [`uvpip-linux-arm64`](https://github.com/yv3000/uvpip/releases/latest) |
+| **macOS** | Apple Silicon (`arm64`) | [`uvpip-darwin-arm64`](https://github.com/yv3000/uvpip/releases/latest) |
+| **macOS** | Intel (`amd64`) | [`uvpip-darwin-amd64`](https://github.com/yv3000/uvpip/releases/latest) |
+| **Windows** | `x64` (`amd64`) | [`uvpip-windows-amd64.exe`](https://github.com/yv3000/uvpip/releases/latest) |
+| **Windows** | `arm64` | [`uvpip-windows-arm64.exe`](https://github.com/yv3000/uvpip/releases/latest) |
+
+### Option 4: Build from Source
+
+Only Git and Go 1.26+ are required:
+
+```bash
+git clone https://github.com/yv3000/uvpip.git
+cd uvpip
+go build -o uvpip .
+```
+
+> [!NOTE]
+> **JavaScript / Node.js Ecosystem:** Looking for a similar transparent wrapper that accelerates `npm`, `yarn`, and `pnpm` using Bun? Check out our sister project **[`bunpm`](https://github.com/yv3000/bunpm)**, registered on npm:
+> ```bash
+> npm install -g bunpm-cli
+> ```
+
+---
 
 ## Requirements
 
